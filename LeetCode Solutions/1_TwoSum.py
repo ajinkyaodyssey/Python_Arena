@@ -1,3 +1,4 @@
+#Using 2 pointers approach -> O(n^2)
 class Solution(object):
     def twoSum(self, nums, target):
         """
