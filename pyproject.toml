@@ -1,0 +1,5 @@
+[project]
+name = "python-arena"
+version = "0.1.0"
+description = "Python learning workspace"
+requires-python = ">=3.12"
