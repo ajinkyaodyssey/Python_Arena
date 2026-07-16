@@ -73,7 +73,26 @@ def validate_response_fields(required, actual):
 # Output: {"chromium": {"passed": 1, "failed": 1},
 #           "firefox":  {"passed": 0, "failed": 1}}
 def results_by_browser(test_results):
-    pass
+    result = {}
+    
+    for test in test_results:
+        browser = test["browser"]
+        status = test["status"] 
+        
+        # Initialize browser if not present
+        if browser not in result:
+            result[browser] = {
+                "passed" : 0,
+                "failed" : 0
+            }
+        
+        #update counts
+        if status == "PASS":
+            result[browser]["passed"] = result[browser]["passed"] + 1
+        else:
+            result[browser]["failed"] = result[browser]["failed"] + 1
+        
+    return result
     
 
 # CHALLENGE 5
