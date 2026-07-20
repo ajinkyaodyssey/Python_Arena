@@ -101,3 +101,67 @@ class InventoryPage(BasePage):
         
     def __str__(self):
         return f"InventoryPage({self.base_url}{self.URL_PATH})"
+
+# Using them - fake page object for demo
+fake_page = object()
+base_url = "https://www.saucedemo.com"
+
+login = LoginPage(fake_page, base_url)
+inventory = InventoryPage(fake_page, base_url)
+
+# Inherited methods work on child classes
+print("--- LoginPage ---")
+login.goto()                        # navigate() inherited from BasePage
+print(f"Loaded: {login.is_loaded()}")      # is_loaded() inherited
+login.take_screenshot("login_page") # take_screenshot() inherited
+result = login.login("standard_user", "secret_sauce")
+print(f"Login success: {result}")
+print(f"Attempts: {login.login_attempts}")
+print(f"Title: {login.get_title()}")       # overridden version
+print(login)                               # __str__ overridden
+
+print("\n--- InventoryPage ---")
+inventory.goto()
+inventory.add_to_cart("Sauce Labs Backpack").add_to_cart("Sauce Labs Bike Light")
+print(f"Cart count: {inventory.get_cart_count()}")
+print(f"Title: {inventory.get_title()}")
+print(inventory)
+        
+
+# =============================================
+# SECTION 2: isinstance() and issubclass()
+# =============================================
+
+
+print("\n=== ISINSTANCE AND ISSUBCLASS ===")
+
+print(isinstance(login, LoginPage))     # True - login IS a LoginPage
+print(isinstance(login, BasePage))      # True - login IS ALSO a BasePage
+print(isinstance(login, InventoryPage))     #False
+
+print(issubclass(LoginPage, BasePage))      #True
+print(issubclass(InventoryPage, BasePage))      #True
+print(issubclass(LoginPage, InventoryPage))     #False
+
+
+# =============================================
+# SECTION 3: What happens without super().__init__()
+# =============================================
+
+
+print("\n=== WHAT BREAKS WITHOUT SUPER ===")
+
+class BrokenPage(BasePage):
+    def __init__(self, page, base_url):
+        # Forgot to call super().__init__()
+        self.my_attribute = "I exist"
+        # self.page, self.base_url, self._loaded are NEVER SET
+
+page_obj = BrokenPage(fake_page, base_url)
+print(f"my_attribute: {page_obj.my_attribute}")      # works
+
+try:
+    page_obj.navigate()     # uses self.base_url which was never set
+except AttributeError as e:
+    print(f"AttributeError: {e}")
+    print("This is why super().__init__() is not optional")
