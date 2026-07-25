@@ -1,0 +1,314 @@
+Part 1: Core Python Concepts
+
+------------------------------------------------------------------------------------
+
+Q1: Difference between is and ==?
+== checks value (Do they have the same content?).
+
+is checks identity/memory address (Are they literally the exact same object in memory?).
+
+Python
+a = [1, 2]
+b = [1, 2]
+
+a == b  # True  (Same contents)
+a is b  # False (Two separate lists in memory)
+
+
+------------------------------------------------------------------------------------
+
+
+Q2: What does "dynamically typed" mean and what bug can it cause?
+Dynamically typed means Python checks variable types at runtime, not beforehand. You don't declare types when creating variables.
+
+The Bug: Passing an unexpected data type into a function, which only fails later when the code runs.
+
+Python
+def add_bonus(salary):
+    return salary + 500
+
+# Bug: Passed a string instead of a number; crashes at runtime
+add_bonus("5000")  # TypeError!
+
+
+------------------------------------------------------------------------------------
+
+
+Q3: List every falsy value in Python. Why does it matter in test code?
+Every value that evaluates to False in a boolean context:
+
+False
+
+None
+
+0, 0.0, 0j
+
+Empty sequences/collections: "", [], (), {}, set()
+
+Why it matters in test code: Checking if not result: can accidentally pass on 0 or "" (empty string) when you specifically meant to check if the result was None.
+
+
+------------------------------------------------------------------------------------
+
+
+Q4: Difference between *args and **kwargs with a Test Automation example?
+*args passes a variable number of positional arguments (as a tuple).
+
+**kwargs passes a variable number of keyword/named arguments (as a dictionary).
+
+Test Automation Example: Creating a generic API client method that can accept optional parameters or headers.
+
+Python
+def make_api_request(endpoint, *url_parts, **headers):
+    # url_parts becomes a tuple like ('users', '123')
+    # headers becomes a dict like {'Authorization': 'Bearer xxx'}
+    url = f"https://api.com/{endpoint}/" + "/".join(url_parts)
+    print(f"Calling {url} with headers {headers}")
+
+make_api_request("v1", "users", "123", Authorization="Bearer token123")
+Part 2: Data Structures
+
+
+------------------------------------------------------------------------------------
+
+
+Q5: List vs Tuple vs Set — when do you choose each one?
+List ([]): Ordered, mutable (changeable), allows duplicates. Use when order matters and you need to add/remove items (e.g., list of test steps).
+
+Tuple (()): Ordered, immutable (cannot change), allows duplicates. Use for fixed, read-only data (e.g., (latitude, longitude) or database config).
+
+Set ({}): Unordered, unique items only. Use when eliminating duplicates or performing fast membership checks (e.g., distinct user IDs).
+
+
+------------------------------------------------------------------------------------
+
+
+Q6: How to safely access a nested key in a dict when any level might be missing?
+Use Python's dict.get() recursively or dict.get({}, {}) chaining:
+
+Python
+data = {"user": {"profile": {"name": "Alex"}}}
+
+# Safe access with dict.get() fallback
+name = data.get("user", {}).get("profile", {}).get("name")  # Returns "Alex"
+age = data.get("user", {}).get("profile", {}).get("age")    # Returns None (No error!)
+
+
+------------------------------------------------------------------------------------
+
+
+Q7: How do you deduplicate a list while preserving order?
+Use dict.fromkeys() (since Python 3.7+ preserves dictionary insertion order):
+
+Python
+items = ["apple", "banana", "apple", "cherry"]
+unique_items = list(dict.fromkeys(items))
+# Output: ['apple', 'banana', 'cherry']
+(Note: list(set(items)) removes duplicates, but ruins the original order!)
+
+
+------------------------------------------------------------------------------------
+
+
+Q8: 100,000 API response IDs — List or Set for checking if an ID exists?
+Set.
+
+Set lookup: O(1) time complexity (instantaneous hash lookup regardless of size).
+
+List lookup: O(n) time complexity (must scan items one by one). Searching 100,000 items in a set takes microseconds; a list scan is drastically slower.
+
+
+------------------------------------------------------------------------------------
+
+
+Q9: Difference between dict[key] and dict.get(key)?
+dict[key] raises a KeyError crash if the key does not exist.
+
+dict.get(key) safely returns None (or a default value you specify) if the key does not exist.
+
+
+------------------------------------------------------------------------------------
+
+
+Q10: sort() vs sorted() — what is the difference?
+list.sort() sorts the list in-place (modifies the original list directly, returns None).
+
+sorted(list) returns a new sorted list (leaves the original list untouched).
+
+Part 3: Object-Oriented Programming (OOP) & Advanced Concepts
+
+
+------------------------------------------------------------------------------------
+
+
+Q11: Difference between a class attribute and an instance attribute?
+Class attribute: Shared across all instances of the class.
+
+Instance attribute: Unique to that specific instance (bound using self).
+
+Bug Example:
+
+Python
+class TestSuite:
+    failed_tests = [] # Class attribute (SHARED across all test suites!)
+
+suite1 = TestSuite()
+suite2 = TestSuite()
+
+suite1.failed_tests.append("test_login")
+
+# Bug: suite2's list was also updated!
+print(suite2.failed_tests) # Output: ['test_login']
+
+
+------------------------------------------------------------------------------------
+
+
+Q12: @classmethod vs @staticmethod with real examples?
+@classmethod: Receives the class (cls) as the first argument. Used for alternative constructors or factory methods.
+
+@staticmethod: Receives no self or cls. Used as a utility function inside a class namespace.
+
+Python
+class User:
+    def __init__(self, name, role):
+        self.name = name
+        self.role = role
+
+    @classmethod
+    def create_admin(cls, name):
+        # Factory method creating a specialized object
+        return cls(name, role="Admin")
+
+    @staticmethod
+    def is_valid_email(email):
+        # Helper function with no class/instance dependency
+        return "@" in email
+
+
+------------------------------------------------------------------------------------
+
+
+Q13: What does super().__init__() do and what breaks if you forget it?
+It calls the __init__ constructor of the parent class, ensuring inherited variables/setup run properly.
+
+If you forget it: The child object won't initialize the parent's attributes, causing AttributeError whenever parent properties/methods are accessed.
+
+
+------------------------------------------------------------------------------------
+
+
+Q14: Explain encapsulation with a test automation example.
+Encapsulation bundles data and methods together while hiding internal details (usually prefixing private variables with _ or __).
+
+Test Automation Example (Page Object Model):
+
+Python
+class LoginPage:
+    def __init__(self, driver):
+        self._driver = driver
+        self._username_input = "#user" # Hidden element locator
+
+    def login(self, username, password):
+        # Hides the complex browser interaction logic from the test script
+        self._driver.find_element(self._username_input).send_keys(username)
+        # ...
+
+
+------------------------------------------------------------------------------------
+
+
+Q15: What is polymorphism? Show it with the page class hierarchy.
+Polymorphism allows different classes to share the same method interface, but handle execution in their own specific way.
+
+Python
+class BasePage:
+    def verify_page_loaded(self):
+        pass
+
+class HomePage(BasePage):
+    def verify_page_loaded(self):
+        print("Checking for dashboard widget...")
+
+class SettingsPage(BasePage):
+    def verify_page_loaded(self):
+        print("Checking for settings form...")
+
+# Polymorphism in action: Same method call, different execution
+pages = [HomePage(), SettingsPage()]
+for page in pages:
+    page.verify_page_loaded()
+
+
+------------------------------------------------------------------------------------
+
+
+Q16: What is an abstract class and why use one in a framework?
+An abstract class (using abc.ABC and @abstractmethod) cannot be instantiated directly. It acts as a strict blueprint requiring child classes to implement specific methods.
+
+Why use it in a framework: It enforces consistent standards across teams (e.g., ensuring every Page class implements a .load() method).
+
+
+------------------------------------------------------------------------------------
+
+
+Q17: Difference between __str__ and __repr__?
+__str__: User-friendly readable output (for print() statements and end-users).
+
+__repr__: Unambiguous, developer-focused output (useful for debugging and logging; ideally valid Python code to recreate the object).
+
+
+------------------------------------------------------------------------------------
+
+
+Q18: What does @property do and why is it better than a plain attribute for computed values?
+@property allows a method to be accessed like a standard attribute (without adding parentheses ()).
+
+Why it's better: It computes values dynamically on demand without storing stale data, while keeping a clean syntax.
+
+Python
+class TestCase:
+    def __init__(self, passed, failed):
+        self.passed = passed
+        self.failed = failed
+
+    @property
+    def total(self):
+        return self.passed + self.failed # Always calculated live!
+
+tc = TestCase(10, 2)
+print(tc.total) # Output: 12 (Accessed as an attribute, no tc.total() needed)
+
+
+------------------------------------------------------------------------------------
+
+
+Q19: What is the mutable default argument bug? (Wrong & Correct versions)
+In Python, default function parameters are evaluated once when the function is defined, not every time it is called. Using mutable types (lists/dicts) as defaults shares that single object across calls.
+
+❌ Wrong Version:
+
+Python
+def add_test(test_name, test_list=[]): # The list persists across function calls!
+    test_list.append(test_name)
+    return test_list
+
+print(add_test("Test 1")) # Output: ['Test 1']
+print(add_test("Test 2")) # Output: ['Test 1', 'Test 2'] (BUG!)
+✅ Correct Version:
+
+Python
+def add_test(test_name, test_list=None):
+    if test_list is None:
+        test_list = []
+    test_list.append(test_name)
+    return test_list
+
+
+------------------------------------------------------------------------------------
+
+
+Q20: What does isinstance(obj, ClassName) return and why is it useful?
+It returns True if obj is an instance of ClassName (or any of its subclasses).
+
+Why it's useful: It checks types safely while properly supporting inheritance (unlike type(obj) == ClassName, which fails for subclasses).
