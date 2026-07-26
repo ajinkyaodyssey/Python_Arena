@@ -1,0 +1,183 @@
+# DAY 6 - FILE 3: Challenge
+# Write @timer and @retry from scratch - no looking at previous files
+# Run with: python3 day6_challenge.py
+
+import functools
+import time
+
+# =============================================
+# CHALLENGE 1: @timer
+# =============================================
+# Write a decorator called `timer` that:
+# - Measures how long the decorated function takes to run
+# - Prints: "  [func_name] completed in X.XXXXs"
+# - Returns the original function's return value unchanged
+# - Works on functions with any number of arguments
+# - Preserves the original function's __name__ and __doc__
+
+def timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        start = time.perf_counter()
+        return func(*args, **kwargs)
+        elapsed = time.per_counter - start
+        print(f"{func.__name__} completed in {elapsed:.4f}")
+    return wrapper
+
+
+# =============================================
+# CHALLENGE 2: @retry
+# =============================================
+# Write a decorator factory called `retry` that takes:
+# - max_attempts (int, default=3)
+# - delay (float, default=0.5) - seconds to wait between attempts
+# - exceptions (tuple, default=(Exception,)) - which exceptions to catch
+#
+# Behaviour:
+# - Try calling the function
+# - If it raises one of the specified exceptions, wait `delay` seconds and try again
+# - If it succeeds, return the result immediately
+# - If ALL attempts fail, raise the LAST exception that occurred
+# - Print attempt number on each try: "  Attempt X/Y: func_name"
+
+def retry(max_attempts=3, delay=0.5, exceptions=(Exception,)):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(1, max_attempts+1):
+                try:
+                    print(f" Attempts {attempt}/{max_attempts}: {func.__name__}")
+                    result = func(*args, **kwargs)
+                    print(f"Success on attempt {attempt}")
+                    return result
+                    
+                except exceptions as e:     #exceptions is one of the argument that we have defined, exceptions is just a variable holding a tuple of exception classes
+                    last_exception = e
+                    print(f" Failed: {e}")
+                    if attempt < max_attempts:
+                        time.sleep(delay)
+                    else:
+                        print(f"All {max_attempts} attempts failed")
+                        raise last_exception
+        return wrapper
+    return decorator
+
+
+# =============================================
+# DO NOT MODIFY BELOW THIS LINE
+# =============================================
+
+print("=== TESTING @timer ===\n")
+
+@timer
+def slow_function():
+    """Simulates a slow operation."""
+    time.sleep(0.1)
+    return "done"
+
+@timer
+def fast_function(x, y):
+    return x + y
+
+@timer
+def function_with_kwargs(name, role="tester"):
+    return f"{name} is a {role}"
+
+# Test 1: timer returns correct value
+result = slow_function()
+assert result == "done", "Test 1a: timer must return original return value"
+print("TEST 1 PASSED: timer returns original value")
+
+# Test 2: timer works with arguments
+result = fast_function(3, 4)
+assert result == 7, "Test 2a: timer must work with positional args"
+print("TEST 2 PASSED: timer works with positional args")
+
+# Test 3: timer works with keyword arguments
+result = function_with_kwargs("Divya", role="sdet")
+assert result == "Divya is a sdet", "Test 3a failed"
+print("TEST 3 PASSED: timer works with keyword args")
+
+# Test 4: timer preserves function name and docstring
+assert slow_function.__name__ == "slow_function", \
+    f"Test 4a: expected 'slow_function', got '{slow_function.__name__}'"
+assert slow_function.__doc__ == "Simulates a slow operation.", \
+    f"Test 4b: docstring not preserved"
+print("TEST 4 PASSED: timer preserves __name__ and __doc__")
+
+print("\n=== TESTING @retry ===\n")
+
+# Setup: counters to track how many times each function is called
+attempt_tracker = {"flaky": 0, "always_fail": 0, "value_error": 0}
+
+@retry(max_attempts=3, delay=0.01)
+def flaky_function():
+    """Fails twice then succeeds."""
+    attempt_tracker["flaky"] += 1
+    if attempt_tracker["flaky"] < 3:
+        raise ConnectionError(f"Attempt {attempt_tracker['flaky']} failed")
+    return "success after retries"
+
+@retry(max_attempts=2, delay=0.01)
+def always_fails():
+    """Always raises an exception."""
+    attempt_tracker["always_fail"] += 1
+    raise TimeoutError("Always times out")
+
+@retry(max_attempts=3, delay=0.01, exceptions=(ValueError,))
+def only_retries_value_error():
+    """Only retries on ValueError, not other exceptions."""
+    attempt_tracker["value_error"] += 1
+    raise TypeError("This should NOT be retried")
+
+# Test 5: retry succeeds on third attempt
+result = flaky_function()
+assert result == "success after retries", "Test 5a failed"
+assert attempt_tracker["flaky"] == 3, \
+    f"Test 5b: expected 3 attempts, got {attempt_tracker['flaky']}"
+print("TEST 5 PASSED: retry succeeds after failures")
+
+# Test 6: retry raises last exception after all attempts fail
+try:
+    always_fails()
+    assert False, "Test 6a: should have raised TimeoutError"
+except TimeoutError:
+    pass
+assert attempt_tracker["always_fail"] == 2, \
+    f"Test 6b: expected 2 attempts, got {attempt_tracker['always_fail']}"
+print("TEST 6 PASSED: retry raises after all attempts exhausted")
+
+# Test 7: retry only catches specified exceptions
+try:
+    only_retries_value_error()
+    assert False, "Test 7a: should have raised TypeError"
+except TypeError:
+    pass
+assert attempt_tracker["value_error"] == 1, \
+    f"Test 7b: TypeError should not be retried, expected 1 attempt, " \
+    f"got {attempt_tracker['value_error']}"
+print("TEST 7 PASSED: retry only catches specified exceptions")
+
+# Test 8: retry preserves function metadata
+assert flaky_function.__name__ == "flaky_function", \
+    f"Test 8a: expected 'flaky_function', got '{flaky_function.__name__}'"
+assert flaky_function.__doc__ == "Fails twice then succeeds.", \
+    "Test 8b: docstring not preserved"
+print("TEST 8 PASSED: retry preserves __name__ and __doc__")
+
+# Test 9: retry works with default arguments
+call_count = {"default": 0}
+
+@retry()        # all defaults: max_attempts=3, delay=0.5, exceptions=(Exception,)
+def default_retry_test():
+    call_count["default"] += 1
+    if call_count["default"] < 2:
+        raise Exception("First attempt fails")
+    return "default retry worked"
+
+result = default_retry_test()
+assert result == "default retry worked", "Test 9a failed"
+print("TEST 9 PASSED: retry works with default arguments")
+
+print("\nALL 9 TESTS PASSED. Day 6 complete.")
