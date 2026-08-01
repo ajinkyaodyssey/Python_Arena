@@ -1,0 +1,390 @@
+The Only Change — Where You Work
+
+Instead of creating a separate folder on your laptop, create it inside the Codespace:
+
+bash
+cd ~
+mkdir git-practice
+cd git-practice
+git init
+git config user.name "Divya"
+git config user.email "divya@test.com"
+
+Everything else from Day 9 is identical. Every command. Every step. Copy them exactly.
+
+Pushing to GitHub From Inside Codespace
+
+This is the one part that is slightly different. When you push from a Codespace, GitHub authentication is already handled automatically — you do not need to set up tokens or SSH keys. It just works.
+
+bash
+# Create the repo on github.com first (click New Repository, name it git-practice)
+# Then in your Codespace terminal:
+git remote add origin https://github.com/YOUR_USERNAME/git-practice.git
+git push -u origin main
+
+If it asks for credentials, use your GitHub username and a Personal Access Token (Settings → Developer Settings → Personal Access Tokens → Generate new token → check repo scope).
+
+The Full Day 9 Plan — Codespace Version
+
+Open your Codespace. Open terminal. Run everything below in order.
+
+Part 1 — Basic Commits (20 min)
+bash
+cd ~
+mkdir git-practice
+cd git-practice
+git init
+git config user.name "Divya"
+git config user.email "divya@test.com"
+
+# Create README
+cat > README.md << 'EOF'
+# Git Practice Repo
+Learning Git for SDET interviews.
+EOF
+
+git status
+git add README.md
+git status
+git commit -m "Initial commit: add README"
+git log --oneline
+bash
+# Create utils.py
+cat > utils.py << 'EOF'
+def add(a, b):
+    return a + b
+
+def subtract(a, b):
+    return a - b
+EOF
+
+git add utils.py
+git commit -m "Add utils.py with add and subtract"
+git log --oneline
+bash
+# Create test file
+cat > test_utils.py << 'EOF'
+from utils import add, subtract
+
+def test_add():
+    assert add(2, 3) == 5
+
+def test_subtract():
+    assert subtract(5, 3) == 2
+EOF
+
+git add test_utils.py
+git commit -m "Add test_utils.py"
+git log --oneline
+
+You should see exactly 3 commits. If yes, move on.
+
+Part 2 — Branching (25 min)
+bash
+# See current branches
+git branch
+
+# Create and switch to new branch
+git checkout -b feature/multiply
+git branch          # asterisk on feature/multiply
+
+# Add new file on this branch
+cat > multiply.py << 'EOF'
+def multiply(a, b):
+    return a * b
+
+def divide(a, b):
+    if b == 0:
+        raise ValueError("Cannot divide by zero")
+    return a / b
+EOF
+
+git add multiply.py
+git commit -m "Add multiply and divide functions"
+bash
+# Add tests for it
+cat > test_multiply.py << 'EOF'
+from multiply import multiply, divide
+
+def test_multiply():
+    assert multiply(3, 4) == 12
+
+def test_divide():
+    assert divide(10, 2) == 5.0
+
+def test_divide_by_zero():
+    try:
+        divide(5, 0)
+        assert False
+    except ValueError:
+        pass
+EOF
+
+git add test_multiply.py
+git commit -m "Add tests for multiply and divide"
+git log --oneline
+bash
+# Switch back to main - watch multiply.py disappear
+git checkout main
+ls                  # multiply.py NOT here
+git log --oneline   # only 3 original commits
+
+# Switch back - it reappears
+git checkout feature/multiply
+ls                  # multiply.py IS here
+
+git checkout main   # back to main for next step
+Part 3 — Merging (15 min)
+bash
+git checkout main
+git merge feature/multiply
+git log --oneline       # all 5 commits now on main
+ls                      # multiply.py is here now
+
+# Clean up branch
+git branch -d feature/multiply
+git branch              # only main remains
+
+Output you should see:
+
+Fast-forward
+ multiply.py      | 8 +++++++
+ test_multiply.py | 14 ++++++++++++++
+
+Fast-forward means main had no new commits since branching — Git just moved the pointer. No merge commit needed.
+
+Part 4 — Deliberate Merge Conflict (60 min)
+
+This is the most important section. Do not rush it.
+
+bash
+# Start from main
+git checkout main
+
+# Branch A — modifies add() function
+git checkout -b feature/update-add
+
+cat > utils.py << 'EOF'
+def add(a, b):
+    """Add two numbers. Updated by branch A."""
+    result = a + b
+    print(f"add({a}, {b}) = {result}")
+    return result
+
+def subtract(a, b):
+    return a - b
+EOF
+
+git add utils.py
+git commit -m "feature/update-add: add logging to add function"
+bash
+# Back to main
+git checkout main
+
+# Branch B — also modifies add() differently
+git checkout -b feature/update-subtract
+
+cat > utils.py << 'EOF'
+def add(a, b):
+    """Add two numbers. Updated by branch B."""
+    return int(a) + int(b)
+
+def subtract(a, b):
+    """Subtract b from a."""
+    result = a - b
+    print(f"subtract({a}, {b}) = {result}")
+    return result
+EOF
+
+git add utils.py
+git commit -m "feature/update-subtract: update both functions"
+bash
+# Merge first branch into main (clean)
+git checkout main
+git merge feature/update-add
+git log --oneline
+bash
+# Now merge second branch — THIS WILL CONFLICT
+git merge feature/update-subtract
+
+You will see:
+
+Auto-merging utils.py
+CONFLICT (content): Merge conflict in utils.py
+Automatic merge failed; fix conflicts then commit the result.
+bash
+# See what the file looks like now
+cat utils.py
+
+You will see conflict markers like this:
+
+def add(a, b):
+<<<<<< HEAD
+    """Add two numbers. Updated by branch A."""
+    result = a + b
+    print(f"add({a}, {b}) = {result}")
+    return result
+======
+    """Add two numbers. Updated by branch B."""
+    return int(a) + int(b)
+>>>>>> feature/update-subtract
+
+def subtract(a, b):
+    """Subtract b from a."""
+    result = a - b
+    print(f"subtract({a}, {b}) = {result}")
+    return result
+
+What the markers mean:
+
+<<<<<<< HEAD — what YOUR current branch (main) has
+======= — separator
+>>>>>>> feature/update-subtract — what the INCOMING branch has
+
+Now resolve it. Open the file in the Codespace editor:
+
+bash
+code utils.py
+
+Delete all three marker lines. Write the final correct version. Use the best of both:
+
+python
+def add(a, b):
+    """Add two numbers."""
+    result = a + b
+    print(f"add({a}, {b}) = {result}")
+    return result
+
+def subtract(a, b):
+    """Subtract b from a."""
+    result = a - b
+    print(f"subtract({a}, {b}) = {result}")
+    return result
+
+Save the file. Then back in terminal:
+
+bash
+git status          # shows utils.py as "both modified"
+git add utils.py    # mark conflict as resolved
+git status          # shows "All conflicts fixed but you are still merging"
+git commit          # completes the merge
+# An editor opens with a default message like "Merge branch 'feature/update-subtract'"
+# Press Ctrl+X to save and exit (if nano) or type :wq (if vim)
+
+git log --oneline --graph
+
+You should see:
+
+*   abc1234 Merge branch 'feature/update-subtract'
+|\
+| * def5678 feature/update-subtract: update both functions
+* | ghi9012 feature/update-add: add logging to add function
+|/
+* jkl3456 Add tests for multiply and divide
+* mno7890 Add multiply and divide functions
+* pqr1234 Add test_utils.py
+* stu5678 Add utils.py with add and subtract
+* vwx9012 Initial commit: add README
+
+That branching graph is what you describe when an interviewer asks about merge conflicts.
+
+Part 5 — Other Commands (20 min)
+
+Practice each one. Read the output.
+
+bash
+# git diff — see what changed
+echo "# updated" >> README.md
+git diff                        # unstaged changes
+git add README.md
+git diff --staged               # staged changes not yet committed
+git commit -m "Update README"
+
+# git log variants
+git log                         # full details
+git log --oneline               # compact one line per commit
+git log --oneline --graph       # visual branch tree
+git log --oneline -5            # last 5 only
+git log --oneline README.md     # only commits that touched README
+
+# git show
+git show HEAD                   # full details of last commit
+git show HEAD~1                 # second to last commit
+
+# git stash
+echo "# work in progress" >> utils.py
+git stash                       # saves uncommitted work, cleans working dir
+git status                      # clean
+cat utils.py                    # extra line is gone
+git stash pop                   # restore saved work
+cat utils.py                    # extra line is back
+git restore utils.py            # discard it
+
+# git blame
+git blame utils.py              # who changed each line and in which commit
+Part 6 — .gitignore (10 min)
+bash
+cat > .gitignore << 'EOF'
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+.pytest_cache/
+htmlcov/
+.coverage
+reports/
+test-results/
+playwright-report/
+.env
+.env.local
+secrets.yml
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+*.swp
+EOF
+
+git add .gitignore
+git commit -m "Add .gitignore"
+Part 7 — Push to GitHub (10 min)
+
+Go to github.com → New Repository → name it git-practice → do NOT add README or .gitignore → Create repository.
+
+Copy the HTTPS URL. Then in your Codespace terminal:
+
+bash
+git remote add origin https://github.com/YOUR_USERNAME/git-practice.git
+git push -u origin main
+
+Go to github.com/YOUR_USERNAME/git-practice in your browser. Verify:
+
+All files are there
+Commit history matches your terminal
+The merge commit shows the branching graph in GitHub's commit view
+Part 8 — Full Flow From Memory (15 min)
+
+Close everything. Open a fresh terminal. Without looking above, do this entire sequence from memory:
+
+bash
+cd ~/git-practice
+git checkout -b feature/add-config
+
+Create config.py with any content. Add, commit, push the branch, merge into main, delete the branch, push main.
+
+If you can do that without looking, you own Git.
+
+Day 9 Checklist
+
+[ ] git init → add → commit → log all working in Codespace terminal
+[ ] Created feature branch, made commits, switched back to see files disappear
+[ ] Fast-forward merge completed
+[ ] Deliberate conflict created between two branches modifying same file
+[ ] Conflict markers read and understood
+[ ] Conflict resolved manually in editor, markers deleted, correct code written
+[ ] Merge completed with git add + git commit
+[ ] git log --oneline --graph shows branching tree
+[ ] git stash, git diff, git show, git blame all practiced
+[ ] .gitignore created with correct entries
+[ ] Everything pushed to GitHub and visible in browser
+[ ] Full flow repeated from memory
