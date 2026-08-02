@@ -1,0 +1,39 @@
+# .github/workflows/tests.yml
+# Runs the test suite automatically on every push and pull request
+
+name: Python Test Suite
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          pytest week1/saturday_project/test_library_system.py -v
+
+      - name: Show test summary
+        if: always()
+        run: |
+          pytest week1/saturday_project/test_library_system.py \
+            --tb=short -q
