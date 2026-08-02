@@ -48,52 +48,52 @@ class Book:
             
             
 # ##########################################################################
-# class Member:
-#     _member_counter = 0   ## class attribute — auto-generate IDs
+class Member:
+    _member_counter = 0   ## class attribute — auto-generate IDs
     
-#     def __init__(self, name, email):
-#         Member._member_counter += 1
-#         self.member_id = f"MEM{Member._member_counter:04d}"  # MEM0001, MEM0002...
-#         self.name = name
-#         self.email = email
-#         self._borrowed_books = []      # list of Book objects
+    def __init__(self, name, email):
+        Member._member_counter += 1
+        self.member_id = f"MEM{Member._member_counter:04d}"  # MEM0001, MEM0002...
+        self.name = name
+        self.email = email
+        self._borrowed_books = []      # list of Book objects
         
-#     def checkout_book(self, book):
-#         # - Call book.checkout(self) — pass self so the book knows WHO has it
-#         # - Add book to self._borrowed_books
-#         book.checkout(self)
-#         self._borrowed_books.append(book)
+    def checkout_book(self, book):
+        # - Call book.checkout(self) — pass self so the book knows WHO has it
+        # - Add book to self._borrowed_books
+        book.checkout(self)
+        self._borrowed_books.append(book)
         
-#     def return_book(self, book):
-#         # - Call book.return_book()
-#         # - Remove book from self._borrowed_books
-#         book.return_book()
-#         self._borrowed_books.remove(book)
+    def return_book(self, book):
+        # - Call book.return_book()
+        # - Remove book from self._borrowed_books
+        book.return_book()
+        self._borrowed_books.remove(book)
         
-#     def get_borrowed_books(self):
-#         return self._borrowed_books
+    def get_borrowed_books(self):
+        return self._borrowed_books
         
-#     def __str__(self):
-#         return f"Member({self.member_id} | {self.name} | {len(self._borrowed_books)} books)"
+    def __str__(self):
+        return f"Member({self.member_id} | {self.name} | {len(self._borrowed_books)} books)"
         
 # ###########################################################################
-# class Admin(Member):
+class Admin(Member):
     
-#     def __init__(self, name, email):
-#         super().__init__(name, email)
-#         self.member_id = self.member_id.replace("MEM", "ADM")  # ADM0003 instead of MEM0003
-#         self._added_books = []     # track what this admin added
+    def __init__(self, name, email):
+        super().__init__(name, email)
+        self.member_id = self.member_id.replace("MEM", "ADM")  # ADM0003 instead of MEM0003
+        self._added_books = []     # track what this admin added
         
-#     def add_book(self, library, book):
-#         library.add_book(book)
-#         self._added_books.append(book)
+    def add_book(self, library, book):
+        library.add_book(book)
+        self._added_books.append(book)
         
-#     def remove_book(self, library, book):
-#         if book.is_checked_out == False:
-#             library.remove_book(book)
+    def remove_book(self, library, book):
+        if book.is_checked_out == False:
+            library.remove_book(book)
     
-#     def __str__(self):
-#         return f"Admin({self.member_id} | {self.name} | added {len(self._added_books)} books)"
+    def __str__(self):
+        return f"Admin({self.member_id} | {self.name} | added {len(self._added_books)} books)"
      
 # ############################################################################3
 # class Library:
