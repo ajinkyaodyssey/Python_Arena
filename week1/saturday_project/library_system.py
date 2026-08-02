@@ -48,33 +48,33 @@ class Book:
             
             
 # ##########################################################################
-# class Member:
-#     _member_counter = 0   ## class attribute — auto-generate IDs
+class Member:
+    _member_counter = 0   ## class attribute — auto-generate IDs
     
-#     def __init__(self, name, email):
-#         Member._member_counter += 1
-#         self.member_id = f"MEM{Member._member_counter:04d}"  # MEM0001, MEM0002...
-#         self.name = name
-#         self.email = email
-#         self._borrowed_books = []      # list of Book objects
+    def __init__(self, name, email):
+        Member._member_counter += 1
+        self.member_id = f"MEM{Member._member_counter:04d}"  # MEM0001, MEM0002...
+        self.name = name
+        self.email = email
+        self._borrowed_books = []      # list of Book objects
         
-#     def checkout_book(self, book):
-#         # - Call book.checkout(self) — pass self so the book knows WHO has it
-#         # - Add book to self._borrowed_books
-#         book.checkout(self)
-#         self._borrowed_books.append(book)
+    def checkout_book(self, book):
+        # - Call book.checkout(self) — pass self so the book knows WHO has it
+        # - Add book to self._borrowed_books
+        book.checkout(self)
+        self._borrowed_books.append(book)
         
-#     def return_book(self, book):
-#         # - Call book.return_book()
-#         # - Remove book from self._borrowed_books
-#         book.return_book()
-#         self._borrowed_books.remove(book)
+    def return_book(self, book):
+        # - Call book.return_book()
+        # - Remove book from self._borrowed_books
+        book.return_book()
+        self._borrowed_books.remove(book)
         
-#     def get_borrowed_books(self):
-#         return self._borrowed_books
+    def get_borrowed_books(self):
+        return self._borrowed_books
         
-#     def __str__(self):
-#         return f"Member({self.member_id} | {self.name} | {len(self._borrowed_books)} books)"
+    def __str__(self):
+        return f"Member({self.member_id} | {self.name} | {len(self._borrowed_books)} books)"
         
 # ###########################################################################
 # class Admin(Member):
