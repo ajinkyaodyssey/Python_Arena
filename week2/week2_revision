@@ -1,0 +1,321 @@
+Part 1 — Git Q&A (Write These in Your Own Words) (45 min)
+
+Open a physical notebook or a blank file. Write your answer to every question below before reading my answer. Your own words. Even if wrong. Especially if wrong.
+
+Q1: What is the difference between git add and git commit?
+
+My answer: git add moves your changed files into the staging area — you are telling Git "include these changes in the next snapshot." git commit takes everything in the staging area and permanently saves it as a checkpoint in your local Git history with a label. Add prepares. Commit saves. Neither of these touches GitHub — that is what push is for.
+
+
+Q2: What is the difference between git push and git pull?
+
+My answer: git push sends your local commits up to GitHub. git pull brings the latest commits from GitHub down to your Codespace. Push is you talking to GitHub. Pull is GitHub talking to you. Do pull first thing every morning before writing any code. Do push when you want your work saved on GitHub.
+
+
+Q3: What is a branch and why does it exist?
+
+My answer: A branch is an independent copy of the codebase where you can make changes without affecting main. It exists so that incomplete or experimental work does not break the shared codebase that everyone else depends on. You branch, you work, you PR, you merge, you delete. Main stays clean and deployable at all times.
+
+
+Q4: Walk through what happens when you resolve a merge conflict.
+
+My answer: A conflict happens when two branches changed the same lines of the same file. Git cannot decide which version to keep so it marks both in the file with <<<<<<< HEAD, =======, and >>>>>>> markers. You open the file, read both versions, write the correct final version by hand, delete all three marker lines. Then git add the resolved file and git commit to complete the merge. The commit message is auto-filled by Git.
+
+
+Q5: What is a Pull Request and why use one instead of pushing straight to main?
+
+My answer: A PR is a proposal to merge one branch into another. It creates a review checkpoint — a teammate reads your code, leaves comments, and approves before anything reaches main. It also triggers CI checks so broken tests block the merge automatically. Pushing straight to main skips all of this — no review, no CI check, broken code can reach everyone immediately.
+
+
+Q6: What does git stash do and when would you use it?
+
+My answer: git stash saves your uncommitted changes to a temporary stack and reverts your working directory to the last commit — without making a commit. You use it when you need to switch branches urgently but your current work is not ready to commit. git stash pop brings the saved work back.
+
+
+Q7: What is the difference between git merge and git rebase?
+
+My answer: git merge combines two branches and creates a merge commit — the full history of both branches is preserved including when they diverged. git rebase replays your commits on top of the target branch creating a clean linear history as if you had branched later. Rebase rewrites commit hashes so it must never be used on shared branches that others have already pulled.
+
+
+Q8: What goes in .gitignore for a Python test automation project and why?
+
+My answer: __pycache__/ and *.pyc because Python generates these automatically and they are machine-specific. venv/ and .venv/ because virtual environments are hundreds of megabytes and can be recreated from requirements.txt. .pytest_cache/ and test reports because they are generated artifacts not source code. .env and secrets.yml because credentials committed to a repo are permanent and readable forever even after deletion.
+
+
+Now check your answers against mine. Star every one you got wrong or could not write confidently. Those are your gaps.
+
+
+Part 2 — Decorator, Generator, Context Manager Review (90 min)
+
+Only the questions most likely to be asked in an SDET interview. Not everything — the things that actually come up.
+
+Decorators
+
+
+Q: What is a decorator in Python? Explain the mechanism not just the syntax.
+
+A decorator is a function that takes another function as input and returns a new function that wraps the original. The @decorator_name syntax above a function definition is exactly equivalent to writing function_name = decorator_name(function_name) after the definition. The wrapper runs additional code before and/or after the original function without modifying the original function's code.
+
+python
+# These two are identical:
+
+@timer
+def run_tests():
+    pass
+
+# same as:
+def run_tests():
+    pass
+run_tests = timer(run_tests)
+
+
+Q: Why do you always use @functools.wraps(func) inside a decorator?
+
+Without it the wrapper function replaces the original function's __name__ and __doc__. So run_tests.__name__ returns "wrapper" instead of "run_tests". pytest discovers tests by name — if __name__ returns "wrapper" pytest cannot find your test. Logs and tracebacks also show "wrapper" which makes debugging impossible. @functools.wraps(func) copies the original function's metadata onto the wrapper so the name and docstring are preserved.
+
+python
+import functools
+
+def timer(func):
+    @functools.wraps(func)      # without this: func.__name__ == "wrapper"
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        return result
+    return wrapper
+
+
+Q: Why does the wrapper use *args and **kwargs?
+
+Because the decorator does not know in advance what arguments the wrapped function accepts. *args catches any positional arguments and **kwargs catches any keyword arguments. Without them the wrapper would only work for functions with a specific signature.
+
+python
+def timer(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):       # accepts ANY arguments
+        result = func(*args, **kwargs)  # forwards them all to original
+        return result
+    return wrapper
+
+@timer
+def no_args(): pass
+
+@timer
+def many_args(a, b, c, key="val"): pass
+
+# both work because wrapper accepts anything
+
+
+Q: What is the difference between a decorator with arguments and one without?
+
+Without arguments there are two layers — the decorator function and the wrapper. With arguments there are three layers — the outer function that accepts the arguments, the decorator that accepts the function, and the wrapper that runs the code.
+
+python
+# WITHOUT arguments - two layers
+def simple_log(func):               # layer 1: accepts func
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):   # layer 2: runs the code
+        print(f"calling {func.__name__}")
+        return func(*args, **kwargs)
+    return wrapper
+
+@simple_log
+def my_test(): pass
+
+
+# WITH arguments - three layers
+def log_level(level="INFO"):        # layer 1: accepts arguments
+    def decorator(func):            # layer 2: accepts func
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):  # layer 3: runs the code
+            print(f"[{level}] {func.__name__}")
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@log_level(level="DEBUG")
+def my_other_test(): pass
+
+
+Q: Write @retry from memory right now.
+
+Close this. Open a file. Write it. Come back and check:
+
+python
+import functools
+import time
+
+def retry(max_attempts=3, delay=0.5, exceptions=(Exception,)):
+    def decorator(func):
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(1, max_attempts + 1):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exception = e
+                    if attempt < max_attempts:
+                        time.sleep(delay)
+            raise last_exception
+        return wrapper
+    return decorator
+
+The things interviewers check: three layers, functools.wraps, except exceptions not except Exception (so the caller controls which exceptions get retried), re-raise the last exception after all attempts fail.
+
+
+Generators
+
+Q: What is the difference between return and yield?
+
+return exits the function permanently and sends back one value. yield pauses the function, sends back a value, and preserves all local state — the function resumes from exactly where it left off when the next value is requested. A function with yield is a generator function. Calling it returns a generator object — nothing runs yet. Values are produced one at a time only when requested.
+
+
+Q: Why use a generator instead of returning a list?
+
+Memory. A list holds all values in memory at once before the caller sees any of them. A generator produces one value at a time — only one item is in memory at any point. For large paginated API responses, large log files, or any data set where you do not need all items simultaneously, a generator is dramatically more efficient. The tradeoff is that generators can only be iterated once and cannot be indexed or measured with len().
+
+
+Q: Write a paginated API reader generator from memory.
+
+python
+def paginated_reader(fetch_func, per_page=10):
+    page = 1
+    while True:
+        response = fetch_func(page, per_page)
+        for item in response["items"]:
+            yield item
+        if page >= response["total_pages"]:
+            return
+        page += 1
+
+The key points: yield inside the inner loop produces one item at a time, return inside the outer loop stops the generator cleanly, the next page is only fetched after the current page's items are exhausted.
+
+
+Q: What is a generator expression and how does it differ from a list comprehension?
+
+Syntax is identical except round brackets instead of square brackets. A list comprehension [x for x in items] computes all values immediately and stores them in memory. A generator expression (x for x in items) computes nothing yet — values are produced lazily one at a time as you iterate. Use a list when you need to index, measure, or iterate multiple times. Use a generator when you only iterate once and the data set is large.
+
+
+Context Managers
+
+Q: What does the with statement guarantee?
+
+It guarantees that cleanup code always runs when the block exits — whether the block exited normally, via an exception, or via a return statement. This is implemented through __enter__ which runs setup and returns the resource, and __exit__ which runs cleanup. The guarantee holds even if an exception occurs inside the block.
+
+
+Q: What is the difference between the class-based approach and @contextmanager?
+
+Both provide the same guarantee. The class-based approach uses __enter__ and __exit__ methods — more verbose but gives you a context manager that can also have its own methods (like db.execute(), db.fetchall()). The @contextmanager approach uses a generator function where code before yield is setup, the yield value is what as receives, and code after yield in the finally block is teardown — less verbose, better for simple setup/teardown with no extra methods needed.
+
+
+Q: Why does finally matter inside a @contextmanager?
+
+Without finally, the cleanup code after yield only runs if no exception occurred. If an exception is raised inside the with block, execution jumps past the cleanup code and the resource is never released — a connection leak, a file left open, a lock held forever. finally runs regardless of whether an exception occurred, guaranteeing cleanup always happens.
+
+python
+# WRONG - cleanup skipped on exception
+@contextmanager
+def bad_db(path):
+    conn = sqlite3.connect(path)
+    yield conn
+    conn.close()        # never runs if exception occurs inside with block
+
+# CORRECT - cleanup always runs
+@contextmanager
+def good_db(path):
+    conn = sqlite3.connect(path)
+    try:
+        yield conn
+    finally:
+        conn.close()    # runs on success AND on exception
+
+
+Q: Write ManagedDB from memory right now.
+
+Close this. Write the class. Check:
+
+python
+import sqlite3
+
+class ManagedDB:
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self.conn = None
+        self.cursor = None
+        self._queries_executed = 0
+
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.db_path)
+        self.conn.row_factory = sqlite3.Row
+        self.cursor = self.conn.cursor()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        try:
+            if exc_type is None:
+                self.conn.commit()
+            else:
+                self.conn.rollback()
+        finally:
+            self.conn.close()
+            self.conn = None
+            self.cursor = None
+        return False
+
+    def execute(self, sql, params=()):
+        self._queries_executed += 1
+        self.cursor.execute(sql, params)
+        return self.cursor
+
+    def fetchall(self):
+        return self.cursor.fetchall()
+
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    @property
+    def query_count(self):
+        return self._queries_executed
+
+The things interviewers check: finally inside __exit__, return False to not suppress exceptions, row_factory = sqlite3.Row so rows behave like dicts, @property for query_count.
+
+
+Part 3 — Self Assessment (15 min)
+
+Answer these honestly. One word each:
+
+1. Can I explain what a decorator is mechanically without using the word "wrapper"?
+   Yes / No / Partially
+
+2. Can I write @retry with arguments from memory in under 5 minutes?
+   Yes / No / Partially
+
+3. Can I explain why generators save memory with a concrete example?
+   Yes / No / Partially
+
+4. Can I write a paginated reader generator from memory?
+   Yes / No / Partially
+
+5. Can I explain what with guarantees and why finally matters?
+   Yes / No / Partially
+
+6. Can I write ManagedDB from memory including the finally in __exit__?
+   Yes / No / Partially
+
+7. Can I explain the difference between class-based and @contextmanager?
+   Yes / No / Partially
+
+8. Can I answer all 8 Git questions without notes?
+   Yes / No / Partially
+
+Every "No" — spend 20 minutes on it right now. Every "Partially" — write one working example from scratch and run it.
+
+Week 2 Checkpoint
+
+You have completed:
+
+Decorators — @timer, @retry, stacking, functools.wraps
+Generators — paginated reader, log parser, pipeline pattern
+Context managers — class-based, @contextmanager, finally
+Git — branching, merging, conflict resolution, PR workflow
+GitHub Actions — CI pipeline running tests automatically
