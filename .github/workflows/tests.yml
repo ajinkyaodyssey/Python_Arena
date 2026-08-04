@@ -1,6 +1,4 @@
 # .github/workflows/tests.yml
-# Runs the test suite automatically on every push and pull request
-
 name: Python Test Suite
 
 on:
@@ -10,16 +8,13 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Run pytest
+  unit-tests:
+    name: Unit Tests (pytest, no browser)
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
@@ -28,12 +23,35 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run tests
+      - name: Run unit tests
         run: |
           pytest week1/saturday_project/test_library_system.py -v
 
-      - name: Show test summary
-        if: always()
+  playwright-tests:
+    name: Playwright Tests (browser)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
         run: |
-          pytest week1/saturday_project/test_library_system.py \
-            --tb=short -q
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: |
+          pytest week3/day12/test_login.py -v
+
+      - name: Upload failure screenshots
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-failure-screenshots
+          path: screenshots/
