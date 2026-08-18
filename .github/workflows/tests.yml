@@ -48,6 +48,7 @@ jobs:
       - name: Run Playwright tests
         run: |
           pytest week3/day12/test_login.py -v
+          pytest week3/saturday_project/ -v --tb=short
 
       - name: Upload failure screenshots
         uses: actions/upload-artifact@v4
@@ -55,3 +56,5 @@ jobs:
         with:
           name: playwright-failure-screenshots
           path: screenshots/
+      
+      
