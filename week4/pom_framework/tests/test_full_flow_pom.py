@@ -3,6 +3,7 @@
 # These tests read like a plain English description of what the user does.
 # Zero locators. Zero raw Playwright calls.
 
+import pytest
 from playwright.sync_api import Page
 from week4.pom_framework.pages.login_page import LoginPage
 from week4.pom_framework.pages.inventory_page import InventoryPage
@@ -10,6 +11,8 @@ from week4.pom_framework.pages.inventory_page import InventoryPage
 BASE_URL = "https://www.saucedemo.com"
 
 
+# @pytest.mark.smoke
+@pytest.mark.ui
 def test_complete_purchase_flow(page: Page):
     """
     Full user journey from login to order confirmation.
@@ -30,6 +33,8 @@ def test_complete_purchase_flow(page: Page):
     )
 
 
+# @pytest.mark.regression
+@pytest.mark.ui
 def test_sort_then_buy_most_expensive(page: Page):
     """
     Sort by price high-low, add the first item, complete purchase.
@@ -57,6 +62,8 @@ def test_sort_then_buy_most_expensive(page: Page):
     )
 
 
+# @pytest.mark.regression
+@pytest.mark.ui
 def test_add_remove_then_buy(page: Page):
     """
     Add two items, remove one, buy the remaining one.
@@ -81,6 +88,8 @@ def test_add_remove_then_buy(page: Page):
     )
 
 
+# @pytest.mark.regression
+@pytest.mark.ui
 def test_logout_and_login_again(page: Page):
     """
     Login, logout, login again. Tests the full auth cycle.

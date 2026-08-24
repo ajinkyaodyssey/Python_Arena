@@ -1,4 +1,3 @@
-# .github/workflows/tests.yml
 name: Python Test Suite
 
 on:
@@ -6,55 +5,55 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * *'    # nightly at 2 AM UTC
 
 jobs:
   unit-tests:
-    name: Unit Tests (pytest, no browser)
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: pytest week1/saturday_project/test_library_system.py -v
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Run unit tests
-        run: |
-          pytest week1/saturday_project/test_library_system.py -v
-
-  playwright-tests:
-    name: Playwright Tests (browser)
+  smoke-tests:
+    name: Smoke Tests (fast, every commit)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Install Playwright browsers
-        run: playwright install --with-deps chromium
-
-      - name: Run Playwright tests
-        run: |
-          pytest week3/day12/test_login.py -v
-          pytest week3/saturday_project/ -v --tb=short
-
-      - name: Upload failure screenshots
-        uses: actions/upload-artifact@v4
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      - name: Run smoke tests
+        run: pytest -m smoke -v --tb=short
+      - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: playwright-failure-screenshots
-          path: screenshots/
-      
-      
+          name: smoke-failure-screenshots
+          path: reports/screenshots/
+
+  regression-tests:
+    name: Regression Tests (nightly)
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual trigger, not on every push
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      - run: playwright install --with-deps chromium
+      - name: Run full regression suite
+        run: pytest -m regression -v --tb=short
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-report
+          path: reports/screenshots/
