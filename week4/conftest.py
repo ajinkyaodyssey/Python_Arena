@@ -239,78 +239,54 @@ def checkout(logged_in_page: Page) -> CheckoutPage:     # Fixture preparing chec
 
 
 # =============================================
-# SCREENSHOT ON FAILURE
+# SCREENSHOT ON FAILURE HOOK
 # =============================================
 
-@pytest.hookimpl(tryfirst=True, hookwrapper=True)       # Pytest hook configuration decorator
-def pytest_runtest_makereport(item, call):             # Intercepts test result reports
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
     """
-    Hook that runs after every test phase (setup/call/teardown).
-    We attach the result to the item so the fixture below can read it.
-    tryfirst=True ensures this runs before other hooks.
-    hookwrapper=True lets us access the outcome after it completes.
+    Captures a screenshot directly during the failure call phase
+    and embeds the image bytes into the pytest-html report.
     """
-    outcome = yield                                     # Suspends hook to allow test phase to execute
-    rep = outcome.get_result()                          # Retrieves test result report
-    setattr(item, f"rep_{rep.when}", rep)               # Stores result dynamically on test item object
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, f"rep_{rep.when}", rep)
 
+    # Trigger only on failure during test execution phase
+    if rep.when == "call" and rep.failed:
+        page_obj = None
 
-# =============================================
-# SCREENSHOT ON FAILURE + ATTACH TO HTML REPORT
-# =============================================
+        # Un-wrap Page object from direct fixtures or POM classes
+        for arg in item.funcargs.values():
+            if isinstance(arg, Page):
+                page_obj = arg
+                break
+            for attr in ["page", "_page", "driver"]:
+                if hasattr(arg, attr) and isinstance(getattr(arg, attr), Page):
+                    page_obj = getattr(arg, attr)
+                    break
+            if page_obj:
+                break
 
-@pytest.fixture(autouse=True)                           # Runs automatically for all tests
-def attach_screenshot_to_report(request):               # Auto-captures and attaches screenshot on failure
-    """
-    autouse=True: applies to EVERY test automatically.
-    No test needs to list this fixture — it just runs.
+        if page_obj is None:
+            logging.warning(f"Screenshot skipped: No Page object found in funcargs ({list(item.funcargs.keys())})")
+            return
 
-    After each test, checks if the test failed.
-    If it did, finds any Page object in the test's fixtures,
-    takes a screenshot named after the test,
-    and attaches it inline to the pytest-html report.
+        try:
+            if not page_obj.is_closed():
+                os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+                screenshot_path = f"{SCREENSHOT_DIR}/FAIL_{item.name}.png"
+                
+                # 1. Save screenshot to disk AND store raw bytes
+                screenshot_bytes = page_obj.screenshot(path=screenshot_path)
+                logging.info(f"Failure screenshot saved: {screenshot_path}")
 
-    This is how you debug CI failures without being there:
-    the screenshot shows exactly what the page looked like
-    at the moment the test failed.
-    """
-    yield                                               # Waits until test execution completes
-
-    # Only act on failures
-    if not (                                            # Checks if test call execution failed
-        hasattr(request.node, "rep_call")               # Ensures call phase report was attached
-        and request.node.rep_call.failed                # Verifies test phase ended in failure
-    ):
-        return                                          # Exits fixture early if test passed
-
-    # Find a Page object in this test's fixtures
-    page_obj = None                                     # Stores active Page object if found
-    for fixture_name in ["page", "logged_in_page"]:     # Iterates through supported fixture names
-        if fixture_name in request.node.funcargs:       # Checks if fixture was used by current test
-            page_obj = request.node.funcargs[fixture_name] # Extracts active Page instance
-            break                                       # Stops searching once found
-
-    if page_obj is None:                                # If no active Page object was associated
-        return                                          # Exit without taking screenshot
-
-    # Take screenshot and save to disk
-    os.makedirs(SCREENSHOT_DIR, exist_ok=True)          # Ensures destination directory exists
-    screenshot_path = (                                 # Constructs unique screenshot file path
-        f"{SCREENSHOT_DIR}/FAIL_{request.node.name}.png"
-    )
-
-    try:
-        page_obj.screenshot(path=screenshot_path)               # Takes screenshot of browser viewport
-        logging.info(f"Failure screenshot saved: {screenshot_path}") # Logs path
-
-        # Attach to pytest-html report so it appears inline
-        # request.node.extras is provided by pytest-html plugin
-        if hasattr(request.node, "extras"):             # Only attach if pytest-html is active
-            import pytest_html                          # Import here to avoid hard dependency
-            request.node.extras.append(                 # Appends image to test's extras list
-                pytest_html.extras.image(screenshot_path) # Creates inline image element
-            )
-            logging.info("Screenshot attached to HTML report") # Logs successful attachment
-
-    except Exception as e:
-        logging.warning(f"Could not take or attach screenshot: {e}") # Logs warning on any failure
+                # 2. Embed base64 image bytes directly into pytest-html
+                import pytest_html
+                extra = getattr(rep, "extra", [])
+                extra.append(pytest_html.extras.image(screenshot_bytes, mime_type="image/png"))
+                rep.extra = extra
+            else:
+                logging.warning("Screenshot skipped: Page was closed before capture")
+        except Exception as e:
+            logging.warning(f"Failed to capture or attach screenshot: {e}")

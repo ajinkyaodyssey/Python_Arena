@@ -46,7 +46,7 @@ class LoginPage(BasePage):
 
     def fill_username(self, username: str) -> "LoginPage":
         """Type into the username field. Returns self for chaining."""
-        log.info(f"Filling username: {username}")
+        log.info(f"Filling username: '{username}'")
         self.page.fill(self._USERNAME_INPUT, username)
         return self
 
@@ -73,11 +73,11 @@ class LoginPage(BasePage):
             inventory = LoginPage(page).navigate().login("user", "pass")
         """
         from .inventory_page import InventoryPage
-
+        log.info(f"Attempting login for user: '{username}'")
         self.fill_username(username)
         self.fill_password(password)
         self.click_login()
-        log.info(f"Login attempted for user: {username}")
+        log.info("Login submitted — expecting inventory page")
         return InventoryPage(self.page, self.base_url)
 
     def login_expecting_failure(self, username: str, password: str) -> "LoginPage":
@@ -88,15 +88,20 @@ class LoginPage(BasePage):
             login_page.login_expecting_failure("wrong", "wrong")
             assert login_page.get_error_text() == "..."
         """
+        log.info(
+            f"Attempting login expecting failure — user: '{username}'"
+        )
         self.fill_username(username)
         self.fill_password(password)
         self.click_login()
-        return self    
+        log.info("Login submitted — expecting error message")
+        return self  
         
     def close_error(self) -> "LoginPage":
-            """Click the X button to close the error message."""
-            return self.page.click(self._ERROR_CLOSE_BTN)
-            return self
+        """Click the X button to close the error message."""
+        log.info("Closing error message")
+        self.page.click(self._ERROR_CLOSE_BTN)
+        return self
             
     
     # =============================================
@@ -105,11 +110,15 @@ class LoginPage(BasePage):
 
     def get_error_text(self) -> str:
         """Returns the text of the error message."""
-        return self.page.locator(self._ERROR_MESSAGE).text_content().strip()
+        text = self.page.locator(self._ERROR_MESSAGE).text_content().strip()
+        log.info(f"Error message text: '{text}'")
+        return text
 
     def is_error_visible(self) -> bool:
         """True if the error message is currently visible."""
-        return self.page.locator(self._ERROR_MESSAGE).is_visible()
+        visible = self.page.locator(self._ERROR_MESSAGE).is_visible()
+        log.debug(f"Error message visible: {visible}")
+        return visible
 
     def get_username_value(self) -> str:
         """Returns the current value in the username field."""
@@ -121,22 +130,30 @@ class LoginPage(BasePage):
 
     def expect_loaded(self) -> "LoginPage":
         """Assert the login page has loaded correctly."""
+        log.info("Asserting login page is loaded")
         expect(self.page).to_have_title("Swag Labs")
         expect(self.page.locator(self._LOGIN_BUTTON)).to_be_visible()
+        log.info("Login page loaded assertion passed")
         return self
 
     def expect_error_containing(self, text: str) -> "LoginPage":
         """Assert error message is visible and contains the given text."""
+        log.info(f"Asserting error contains: '{text}'")
         expect(self.page.locator(self._ERROR_MESSAGE)).to_be_visible()
         expect(self.page.locator(self._ERROR_MESSAGE)).to_contain_text(text)
+        log.info("Error message assertion passed")
         return self
 
     def expect_error_not_visible(self) -> "LoginPage":
         """Assert no error message is showing."""
+        log.info("Asserting no error message is showing")
         expect(self.page.locator(self._ERROR_MESSAGE)).not_to_be_visible()
+        log.info("No error message assertion passed")
         return self
 
     def expect_on_login_page(self) -> "LoginPage":
         """Assert we are still on the login page (login failed)."""
+        log.info("Asserting still on login page")
         expect(self.page).to_have_url(f"{self.base_url}/")
+        log.info("Login page URL assertion passed")
         return self
