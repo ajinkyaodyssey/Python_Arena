@@ -3,6 +3,7 @@
 # Every page class inherits from this.
 # Contains shared behaviour — navigation, screenshots, title.
 
+import os
 import logging
 from playwright.sync_api import Page, expect
 
@@ -43,11 +44,13 @@ class BasePage:
         """
         log.info(f"Navigating to {self._url}")
         self.page.goto(self._url)       # My Login Page Object → give me the browser tab → navigate it
+        log.info(f"Navigation complete. Current URL: {self.page.url}")
         return self
         
     def get_title(self) -> str:
-        """Returns the browser tab title."""
-        return self.page.title()
+        title = self.page.title()
+        log.debug(f"Page title: {title}")
+        return title
         
     def get_url(self) -> str:
         """Returns the current browser URL"""
@@ -60,11 +63,12 @@ class BasePage:
     
     def wait_for_url(self, expected_url: str) -> "BasePage":
         """Wait until browser URL matches the expected_url"""
+        log.info(f"Waiting for URL: {expected_url}")
         self.page.wait_for_url(expected_url)
         return self         #After I'm done waiting, give the same BasePage object back
         
     def wait_for_load_state(self, state: str = "load") -> "BasePage":
-        """Wait for page to reach a specific load state"""
+        log.info(f"Waiting for load state: {state}")
         self.page.wait_for_load_state(state)
         return self
         
@@ -93,10 +97,10 @@ class BasePage:
         
     def take_full_page_screenshot(self, name: str) -> str:
         """Full page screenshot — captures content below the fold."""
-        import os
-        os.makedirs("reports/screenshots", exist_ok = True)
+        os.makedirs("reports/screenshots", exist_ok=True)
         path = f"reports/screenshots/{name}_full.png"
-        self.page.screenshot(path=path, full_page = True)
+        self.page.screenshot(path=path, full_page=True)
+        log.info(f"Full page screenshot saved: {path}")
         return path
         
     
@@ -106,12 +110,16 @@ class BasePage:
     
     def expect_url(self, expected_url: str) -> "BasePage":
         """Assert current URL matches expected."""
+        log.info(f"Asserting URL is: {expected_url}")
         expect(self.page).to_have_url(expected_url)
+        log.info("URL assertion passed")
         return self
         
     def expect_title(self, expected_title: str) -> "BasePage":
         """Assert browser tab matches expected."""
+        log.info(f"Asserting title is: {expected_title}")
         expect(self.page).to_have_title(expected_title)
+        log.info("Title assertion passed")
         return self
         
     
