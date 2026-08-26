@@ -15,11 +15,9 @@ import pytest                                           # Testing framework core
 import os                                               # File and directory utilities
 import logging                                          # Standard Python logging library
 from playwright.sync_api import (                      # Synchronous Playwright API imports
-    sync_playwright,                                    # Function to launch Playwright runner
     Page,                                               # Type hint for browser tab/page
     Browser,                                            # Type hint for browser process
     BrowserContext,                                     # Type hint for browser profile/session
-    Playwright                                          # Type hint for main Playwright object
 )
 
 from week4.pom_framework.pages.login_page import LoginPage        # Imports Login Page Object class
@@ -47,21 +45,23 @@ logging.basicConfig(                                    # Configures global log 
 # FIXTURE 1: browser — SESSION SCOPE
 # =============================================
 
-@pytest.fixture(scope="session")                        # Runs once for the entire test session
-def playwright_instance() -> Playwright:                # Starts and manages the Playwright engine
-    """
-    Start and stop the Playwright process once per session.
-    The `with sync_playwright()` block must stay open for the
-    entire session — if it closes, all browsers close with it.
-    """
-    with sync_playwright() as pw:                      # Context manager starting Playwright driver
-        yield pw                                        # Provides engine instance; cleans up after session
+# @pytest.fixture(scope="session")                        # Runs once for the entire test session
+# def playwright_instance() -> Playwright:                # Starts and manages the Playwright engine
+#     """
+#     Start and stop the Playwright process once per session.
+#     The `with sync_playwright()` block must stay open for the
+#     entire session — if it closes, all browsers close with it.
+#     """
+#     with sync_playwright() as pw:                      # Context manager starting Playwright driver
+#         yield pw                                        # Provides engine instance; cleans up after session
 
 
 @pytest.fixture(scope="session")                        # Runs once for the entire test session
-def browser(playwright_instance: Playwright) -> Browser: # Launches main browser process
+def browser(playwright) -> Browser:                     # Uses pytest-playwright's built-in playwright fixture
     """
     Launch ONE browser for the entire test session.
+    Uses pytest-playwright's built-in 'playwright' fixture
+    instead of sync_playwright() to avoid asyncio conflict.
 
     Why session scope:
     - Browser launch takes 1-2 seconds
@@ -74,9 +74,9 @@ def browser(playwright_instance: Playwright) -> Browser: # Launches main browser
     - CI pipelines have no display server
     - Headless is the production-correct way to run
     """
-    browser = playwright_instance.chromium.launch(headless=True) # Launches headless Chromium browser
+    browser = playwright.chromium.launch(headless=True) # Launches headless Chromium browser
     yield browser                                       # Provides browser to downstream fixtures
-    browser.close()                                     # Terminates browser process when session ends
+    browser.close()                                     # Terminates browser process when session ends                                 # Terminates browser process when session ends
 
 
 # =============================================
@@ -255,15 +255,20 @@ def pytest_runtest_makereport(item, call):             # Intercepts test result 
     setattr(item, f"rep_{rep.when}", rep)               # Stores result dynamically on test item object
 
 
+# =============================================
+# SCREENSHOT ON FAILURE + ATTACH TO HTML REPORT
+# =============================================
+
 @pytest.fixture(autouse=True)                           # Runs automatically for all tests
-def screenshot_on_failure(request):                     # Auto-captures screenshot if test fails
+def attach_screenshot_to_report(request):               # Auto-captures and attaches screenshot on failure
     """
     autouse=True: applies to EVERY test automatically.
     No test needs to list this fixture — it just runs.
 
     After each test, checks if the test failed.
-    If it did, finds any Page object in the test's fixtures
-    and takes a screenshot named after the test.
+    If it did, finds any Page object in the test's fixtures,
+    takes a screenshot named after the test,
+    and attaches it inline to the pytest-html report.
 
     This is how you debug CI failures without being there:
     the screenshot shows exactly what the page looked like
@@ -282,19 +287,30 @@ def screenshot_on_failure(request):                     # Auto-captures screensh
     page_obj = None                                     # Stores active Page object if found
     for fixture_name in ["page", "logged_in_page"]:     # Iterates through supported fixture names
         if fixture_name in request.node.funcargs:       # Checks if fixture was used by current test
-            page_obj = request.node.funcargs[fixture_name] # Extracts active Page instance from test args
+            page_obj = request.node.funcargs[fixture_name] # Extracts active Page instance
             break                                       # Stops searching once found
 
-    if page_obj is None:                                # If no active Page object was associated...
-        return                                          # ...exits fixture without taking screenshot
+    if page_obj is None:                                # If no active Page object was associated
+        return                                          # Exit without taking screenshot
 
-    # Take screenshot
-    os.makedirs(SCREENSHOT_DIR, exist_ok=True)          # Ensures destination directory exists on disk
-    screenshot_path = (                                 # Constructs unique target screenshot file path
+    # Take screenshot and save to disk
+    os.makedirs(SCREENSHOT_DIR, exist_ok=True)          # Ensures destination directory exists
+    screenshot_path = (                                 # Constructs unique screenshot file path
         f"{SCREENSHOT_DIR}/FAIL_{request.node.name}.png"
     )
+
     try:
         page_obj.screenshot(path=screenshot_path)               # Takes screenshot of browser viewport
-        logging.info(f"Failure screenshot: {screenshot_path}")   # Logs successful screenshot path
+        logging.info(f"Failure screenshot saved: {screenshot_path}") # Logs path
+
+        # Attach to pytest-html report so it appears inline
+        # request.node.extras is provided by pytest-html plugin
+        if hasattr(request.node, "extras"):             # Only attach if pytest-html is active
+            import pytest_html                          # Import here to avoid hard dependency
+            request.node.extras.append(                 # Appends image to test's extras list
+                pytest_html.extras.image(screenshot_path) # Creates inline image element
+            )
+            logging.info("Screenshot attached to HTML report") # Logs successful attachment
+
     except Exception as e:
-        logging.warning(f"Could not take screenshot: {e}")      # Logs warning if screenshot capture fails
+        logging.warning(f"Could not take or attach screenshot: {e}") # Logs warning on any failure
