@@ -6,6 +6,11 @@
 
 import pytest
 import requests
+from week5.day24.schemas import (
+    SINGLE_USER_RESPONSE_SCHEMA,
+    LIST_USERS_RESPONSE_SCHEMA,
+    validate_schema
+)
 
 BASE_URL = "https://reqres.in/api"
 
@@ -64,6 +69,12 @@ def test_get_valid_user_returns_200(api_client, base_url):
     assert resp.status_code == 200, (
         f"Expected 200, got {resp.status_code}. "
         f"Body: {resp.text[:200]}"
+    )
+
+    validate_schema(
+        resp.json(),
+        SINGLE_USER_RESPONSE_SCHEMA,
+        "GET /api/users/2"
     )
 
     # Parse response body
@@ -200,6 +211,12 @@ def test_list_users_returns_paginated_data(api_client, base_url):
     resp = api_client.get(f"{base_url}/users",params={"page": 1})
 
     assert resp.status_code == 200
+
+    validate_schema(
+        resp.json(),
+        LIST_USERS_RESPONSE_SCHEMA,
+        "GET /api/users?page=1"
+    )
 
     body = resp.json()
 
