@@ -57,3 +57,22 @@ jobs:
         with:
           name: regression-report
           path: reports/screenshots/
+  
+    api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run API tests
+        run: pytest week5/ -v --tb=short
+        env:
+          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
+          TEST_ENV: staging
