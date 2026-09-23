@@ -2,6 +2,7 @@
 # POST, PUT, PATCH, DELETE tests for /api/users
 
 import pytest
+import time
 import uuid
 from .schemas import (
     CREATE_USER_RESPONSE_SCHEMA,
@@ -104,6 +105,7 @@ class TestUpdateUser:
     """PUT and PATCH /api/users/{id} — update existing user."""
 
     def test_put_user_returns_200(self, api, base_url):
+        time.sleep(1)
         resp = api.put(
             f"{base_url}/users/2",
             json={"name": "Janet Updated", "job": "Senior Engineer"}
@@ -113,6 +115,7 @@ class TestUpdateUser:
     def test_put_user_response_matches_schema(
         self, api, base_url
     ):
+        time.sleep(1)
         resp = api.put(
             f"{base_url}/users/2",
             json={"name": "Janet Updated", "job": "Senior Engineer"}
@@ -127,6 +130,7 @@ class TestUpdateUser:
     def test_put_user_response_reflects_sent_data(
         self, api, base_url
     ):
+        time.sleep(1)
         unique_name = f"PUT_{uuid.uuid4().hex[:8]}"
         unique_job = f"Job_{uuid.uuid4().hex[:8]}"
         resp = api.put(
@@ -139,6 +143,7 @@ class TestUpdateUser:
     def test_put_user_response_has_updated_at(
         self, api, base_url
     ):
+        time.sleep(1)
         resp = api.put(
             f"{base_url}/users/2",
             json={"name": "Test", "job": "Tester"}
@@ -147,6 +152,7 @@ class TestUpdateUser:
         assert len(resp.json()["updatedAt"]) > 0
 
     def test_patch_user_returns_200(self, api, base_url):
+        time.sleep(1)
         resp = api.patch(
             f"{base_url}/users/2",
             json={"job": "Principal SDET"}
@@ -156,6 +162,7 @@ class TestUpdateUser:
     def test_patch_user_response_matches_schema(
         self, api, base_url
     ):
+        time.sleep(1)
         resp = api.patch(
             f"{base_url}/users/2",
             json={"name": "Janet", "job": "Principal SDET"}
@@ -171,6 +178,7 @@ class TestUpdateUser:
         self, api, base_url
     ):
         """PATCH should not require full body like PUT."""
+        time.sleep(1)
         resp = api.patch(
             f"{base_url}/users/2",
             json={"job": "Updated Role Only"}
@@ -181,6 +189,7 @@ class TestUpdateUser:
         )
 
     def test_patch_user_has_updated_at(self, api, base_url):
+        time.sleep(1)
         resp = api.patch(
             f"{base_url}/users/2",
             json={"name": "Test", "job": "Tester"}
