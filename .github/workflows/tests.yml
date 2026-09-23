@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 2 * * *'    # nightly at 2 AM UTC
+    - cron: '0 2 * * *'
 
 jobs:
   unit-tests:
@@ -32,16 +32,32 @@ jobs:
       - run: playwright install --with-deps chromium
       - name: Run smoke tests
         run: pytest -m smoke -v --tb=short
+        env:
+          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: smoke-failure-screenshots
           path: reports/screenshots/
 
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run API tests
+        run: pytest week5/ -v --tb=short
+        env:
+          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
+
   regression-tests:
     name: Regression Tests (nightly)
     runs-on: ubuntu-latest
-    # Only run on schedule or manual trigger, not on every push
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
@@ -50,29 +66,12 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: playwright install --with-deps chromium
-      - name: Run full regression suite
+      - name: Run regression suite
         run: pytest -m regression -v --tb=short
+        env:
+          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: regression-report
           path: reports/screenshots/
-
-  api-tests:
-    name: API Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run API tests
-        run: pytest week5/ -v --tb=short
-        env:
-          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
-          TEST_ENV: staging
