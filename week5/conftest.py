@@ -2,6 +2,7 @@
 # Shared fixtures for ALL week5 API tests.
 # Uses central config module — no os.getenv() calls here.
 
+import time
 import pytest
 import requests
 import logging
@@ -65,3 +66,9 @@ def invalid_credentials() -> dict:
         "email": "invalid@notregistered.com",
         "password": "wrongpassword"
     }
+
+@pytest.fixture(autouse=True)
+def rate_limit_guard():
+    """Small delay between API calls to avoid rate limiting in CI."""
+    yield
+    time.sleep(0.5)
