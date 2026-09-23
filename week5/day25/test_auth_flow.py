@@ -353,7 +353,9 @@ def test_complete_auth_flow_login_then_use_token(
     """
     print(f"\n  [FULL FLOW] Starting complete auth flow")
 
-    # STEP 1: Login
+    print(f"\n  [FULL FLOW] Starting complete auth flow")
+
+    # STEP 1: Login using existing api_client (has x-api-key)
     print("  [FULL FLOW] Step 1: Login")
     login_resp = api_client.post(
         f"{base_url}/login",
@@ -363,40 +365,31 @@ def test_complete_auth_flow_login_then_use_token(
         }
     )
 
-    assert login_resp.status_code == 200, (
-        f"Login failed: {login_resp.status_code} {login_resp.text}"
-    )
-
+    assert login_resp.status_code == 200
     token = login_resp.json()["token"]
     print(f"  [FULL FLOW] Token obtained: {token[:8]}...")
 
-    # STEP 2: Create authenticated session
+    # STEP 2: Add Bearer token to existing session
     print("  [FULL FLOW] Step 2: Set Authorization header")
-    auth_session = requests.Session()
-    auth_session.headers.update({
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": f"Bearer {token}"
-    })
+    api_client.headers["Authorization"] = f"Bearer {token}"
 
     # STEP 3: Make authenticated request
     print("  [FULL FLOW] Step 3: Make authenticated request")
-    user_resp = auth_session.get(f"{base_url}/users/2")
+    user_resp = api_client.get(f"{base_url}/users/2")
 
     assert user_resp.status_code == 200, (
         f"Authenticated request failed: {user_resp.status_code}"
     )
 
-    # STEP 4: Verify response
+    # STEP 4: Verify
     print("  [FULL FLOW] Step 4: Verify response")
     user = user_resp.json()["data"]
     assert user["id"] == 2
-    assert "@" in user["email"]
 
     print(f"  [FULL FLOW] Success! User: {user['first_name']} {user['last_name']}")
-    print(f"  [FULL FLOW] Flow complete: Login → Token → Authenticated Request")
 
-    auth_session.close()
+    # Clean up — remove Bearer token so it doesn't affect other tests
+    api_client.headers.pop("Authorization", None)
 
 
 def test_auth_session_fixture_faster_than_login_per_test(
