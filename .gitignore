@@ -71,6 +71,9 @@ trace/
 # =============================================
 reports/
 !reports/.gitkeep
+reports/*.html
+reports/screenshots/*.png
+!reports/screenshots/.gitkeep
 
 # =============================================
 # EDITOR AND OS
