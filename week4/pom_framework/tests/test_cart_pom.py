@@ -115,31 +115,31 @@ def test_cart_item_price_matches_inventory_price(
 ):
     """
     Price shown in cart must match price on inventory page.
-    Catches bugs where cart displays wrong price after adding.
-    This is a real data integrity check.
     """
-    from playwright.sync_api import expect
     from week4.pom_framework.pages.inventory_page import InventoryPage
 
     inv = InventoryPage(logged_in_page, "https://www.saucedemo.com")
 
-    # Get backpack price from inventory
-    prices_before = inv.get_all_prices()
+    # Get backpack price directly by its position after sorting
+    # Find the backpack specifically by name
     names = inv.get_all_product_names()
+    prices = inv.get_all_prices()
+    
+    # Find backpack index and price
     backpack_index = names.index("Sauce Labs Backpack")
-    inventory_price = prices_before[backpack_index]
+    inventory_price = prices[backpack_index]
 
-    # Add to cart and go to cart
+    # Add to cart and verify price matches
     cart = inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart()
-
-    # Price in cart should match inventory price
     cart_prices = cart.get_item_prices()
-    assert len(cart_prices) == 1
+
+    assert len(cart_prices) == 1, (
+        f"Expected 1 item in cart, got {len(cart_prices)}: {cart_prices}"
+    )
     assert cart_prices[0] == inventory_price, (
         f"Cart price {cart_prices[0]} does not match "
         f"inventory price {inventory_price}"
     )
-
 
 def test_cart_page_has_continue_and_checkout_buttons(
     cart: CartPage
