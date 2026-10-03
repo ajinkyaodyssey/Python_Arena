@@ -1,4 +1,19 @@
-name: Python Test Suite
+# .github/workflows/tests.yml
+#
+# WORKFLOW DESIGN:
+# ─────────────────────────────────────────────
+# unit-tests    → every push, fast, no browser
+# smoke-tests   → every push, browser, ~2 min
+# api-tests     → nightly only (reqres.in rate limit)
+# regression    → nightly only, full suite
+#
+# WHY THIS DESIGN:
+# Pushing code 5 times a day should not exhaust
+# a third-party API's free tier. Only tests that
+# validate YOUR code run on every push. Tests that
+# depend on external services run on a schedule.
+
+name: SDET Framework Test Suite
 
 on:
   push:
@@ -6,72 +21,228 @@ on:
   pull_request:
     branches: [main]
   schedule:
+    # Nightly at 2 AM UTC — runs api-tests + regression
     - cron: '0 2 * * *'
+  workflow_dispatch:
+    # Manual trigger — runs everything on demand
+    inputs:
+      run_api_tests:
+        description: 'Run API tests (uses reqres.in quota)'
+        required: false
+        default: 'false'
+        type: boolean
+
+# Cancel in-progress runs on the same branch
+# Prevents queue buildup when you push rapidly
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+
+  # ============================================
+  # JOB 1: Unit Tests
+  # Runs: every push and PR
+  # What: pure Python tests, no browser, no API
+  # Speed: ~10 seconds
+  # ============================================
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: pytest week1/saturday_project/test_library_system.py -v
+          cache: 'pip'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: |
+          pytest week1/saturday_project/test_library_system.py \
+            -v --tb=short \
+            --html=reports/unit_report.html \
+            --self-contained-html
+
+      - name: Upload unit test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-test-report
+          path: reports/unit_report.html
+          retention-days: 7
+
+  # ============================================
+  # JOB 2: Smoke Tests
+  # Runs: every push and PR
+  # What: critical Playwright UI tests only
+  # Speed: ~2-3 minutes
+  # Note: only runs tests marked @pytest.mark.smoke
+  # ============================================
   smoke-tests:
-    name: Smoke Tests (fast, every commit)
+    name: Smoke Tests
     runs-on: ubuntu-latest
+    needs: unit-tests
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: playwright install --with-deps chromium
-      - name: Run smoke tests
-        run: pytest -m smoke -v --tb=short
-        env:
-          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: smoke-failure-screenshots
-          path: reports/screenshots/
+          cache: 'pip'
 
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Create reports directory
+        run: mkdir -p reports/screenshots
+
+      - name: Run smoke tests
+        run: |
+          pytest week4/pom_framework/tests/ \
+            -v --tb=short \
+            --html=reports/smoke_report.html \
+            --self-contained-html
+        continue-on-error: false
+
+      - name: Upload smoke test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-test-report
+          path: |
+            reports/smoke_report.html
+            reports/screenshots/
+          retention-days: 7
+
+  # ============================================
+  # JOB 3: API Tests
+  # Runs: NIGHTLY ONLY or manual trigger
+  # Why not on push: reqres.in has free tier limit
+  # ~100 requests/day. Suite uses ~50 per run.
+  # Two pushes a day would exhaust the quota.
+  # Fix: schedule nightly after limit resets at 2AM.
+  # ============================================
   api-tests:
     name: API Tests
     runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
       - name: Run API tests
-        run: pytest week5/ -v --tb=short
+        run: |
+          pytest week5/ \
+            -v --tb=short \
+            --html=reports/api_report.html \
+            --self-contained-html
+        env:
+          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
+          TEST_ENV: staging
+
+      - name: Upload API test report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-report
+          path: reports/api_report.html
+          retention-days: 7
+
+  # ============================================
+  # JOB 4: Regression Tests
+  # Runs: NIGHTLY ONLY or manual trigger
+  # What: full suite — UI + API + DB validation
+  # Speed: ~8-10 minutes
+  # ============================================
+  regression-tests:
+    name: Regression Tests (Full Suite)
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'schedule' ||
+      github.event_name == 'workflow_dispatch'
+    needs: [unit-tests]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: playwright install --with-deps chromium
+
+      - name: Create reports directory
+        run: mkdir -p reports/screenshots
+
+      - name: Run full regression suite
+        run: |
+          pytest \
+            week1/saturday_project/ \
+            week4/pom_framework/tests/ \
+            week6/day27/ \
+            week6/day28/ \
+            week6/day29/ \
+            week6/day31/ \
+            -v --tb=short \
+            --html=reports/regression_report.html \
+            --self-contained-html
         env:
           REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
 
-  regression-tests:
-    name: Regression Tests (nightly)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - run: pip install -r requirements.txt
-      - run: playwright install --with-deps chromium
-      - name: Run regression suite
-        run: pytest -m regression -v --tb=short
-        env:
-          REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
-      - uses: actions/upload-artifact@v4
+      - name: Upload regression report
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: regression-report
-          path: reports/screenshots/
+          path: |
+            reports/regression_report.html
+            reports/screenshots/
+          retention-days: 14
+
+      - name: Upload DB files for inspection
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: db-files-on-failure
+          path: week6/**/*.db
+          retention-days: 3
