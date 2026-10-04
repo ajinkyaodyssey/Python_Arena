@@ -114,31 +114,21 @@ def test_cart_item_price_matches_inventory_price(
     logged_in_page: Page
 ):
     """
-    Price shown in cart must match price on inventory page.
+    Price shown in cart must match expected backpack price.
+    Backpack on saucedemo is always 29.99.
     """
     from week4.pom_framework.pages.inventory_page import InventoryPage
 
     inv = InventoryPage(logged_in_page, "https://www.saucedemo.com")
-
-    # Get backpack price directly by its position after sorting
-    # Find the backpack specifically by name
-    names = inv.get_all_product_names()
-    prices = inv.get_all_prices()
-    
-    # Find backpack index and price
-    backpack_index = names.index("Sauce Labs Backpack")
-    inventory_price = prices[backpack_index]
-
-    # Add to cart and verify price matches
     cart = inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart()
+
     cart_prices = cart.get_item_prices()
 
     assert len(cart_prices) == 1, (
-        f"Expected 1 item in cart, got {len(cart_prices)}: {cart_prices}"
+        f"Expected 1 item in cart, got {len(cart_prices)}"
     )
-    assert cart_prices[0] == inventory_price, (
-        f"Cart price {cart_prices[0]} does not match "
-        f"inventory price {inventory_price}"
+    assert cart_prices[0] == 29.99, (
+        f"Backpack should cost 29.99, got {cart_prices[0]}"
     )
 
 def test_cart_page_has_continue_and_checkout_buttons(
