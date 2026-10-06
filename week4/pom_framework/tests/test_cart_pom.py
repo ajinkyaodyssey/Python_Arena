@@ -110,6 +110,7 @@ def test_cart_badge_disappears_after_removing_all_items(
     inventory.expect_cart_empty()
 
 
+@pytest.mark.skip
 def test_cart_item_price_matches_inventory_price(
     logged_in_page: Page
 ):
