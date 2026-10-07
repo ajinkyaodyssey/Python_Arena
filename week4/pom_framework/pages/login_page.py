@@ -35,10 +35,9 @@ class LoginPage(BasePage):
     _ERROR_MESSAGE = "[data-test='error']"
     _ERROR_CLOSE_BTN = "[data-test='error-button']"
     _PAGE_LOGO = ".login_logo"
-    
+
     def __init__(self, page: Page, base_url: str = "hhtps://www.saucedemo.com"):
         super().__init__(page, base_url)
-        
 
     # =============================================
     # ACTIONS — what a user can DO on this page
@@ -95,15 +94,14 @@ class LoginPage(BasePage):
         self.fill_password(password)
         self.click_login()
         log.info("Login submitted — expecting error message")
-        return self  
-        
+        return self
+
     def close_error(self) -> "LoginPage":
         """Click the X button to close the error message."""
         log.info("Closing error message")
         self.page.click(self._ERROR_CLOSE_BTN)
         return self
-            
-    
+
     # =============================================
     # QUERIES — what you can READ from this page
     # =============================================

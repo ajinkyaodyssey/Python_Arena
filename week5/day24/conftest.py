@@ -5,8 +5,6 @@
 # No additional fixtures needed for day24.
 
 
-
-
 # ----------------------------------------------------
 
 # # week5/day24/conftest.py

@@ -7,7 +7,7 @@ import os
 import logging
 from playwright.sync_api import Page, expect
 
-log = logging.getLogger(__name__)       #Create/get a logger whose name is the current Python module’s name.
+log = logging.getLogger(__name__)  # Create/get a logger whose name is the current Python module’s name.
 
 
 class BasePage:
@@ -20,22 +20,21 @@ class BasePage:
     - It only knows about things EVERY page has: URL, title, screenshot
     - Child classes add page-specific locators and methods
     """
-    
+
     # Subclasses override this with their specific URL path
     # Example: LoginPage sets PATH = "/"
-    #          InventoryPage sets PATH = "/inventory.html" 
+    #          InventoryPage sets PATH = "/inventory.html"
     PATH: str = ""
-    
+
     def __init__(self, page: Page, base_url: str = "https::/www.saucedemo.com"):
         self.page = page
         self.base_url = base_url
-        self._url = f"{base_url}{self.PATH}"     # Because PATH belongs to the class, but self.PATH lets each subclass/instance provide its own value
-    
-    
+        self._url = f"{base_url}{self.PATH}"  # Because PATH belongs to the class, but self.PATH lets each subclass/instance provide its own value
+
     # =============================================
     # NAVIGATION
     # =============================================
-    
+
     def navigate(self) -> "BasePage":
         """
         Navigate to this page's URL.
@@ -46,37 +45,35 @@ class BasePage:
         self.page.goto(self._url)       # My Login Page Object → give me the browser tab → navigate it
         log.info(f"Navigation complete. Current URL: {self.page.url}")
         return self
-        
+
     def get_title(self) -> str:
         title = self.page.title()
         log.debug(f"Page title: {title}")
         return title
-        
+
     def get_url(self) -> str:
         """Returns the current browser URL"""
         return self.page.url()
-        
-    
+
     # =============================================
     # WAITING
     # =============================================
-    
+
     def wait_for_url(self, expected_url: str) -> "BasePage":
         """Wait until browser URL matches the expected_url"""
         log.info(f"Waiting for URL: {expected_url}")
         self.page.wait_for_url(expected_url)
-        return self         #After I'm done waiting, give the same BasePage object back
-        
+        return self  # After I'm done waiting, give the same BasePage object back
+
     def wait_for_load_state(self, state: str = "load") -> "BasePage":
         log.info(f"Waiting for load state: {state}")
         self.page.wait_for_load_state(state)
         return self
-        
-    
+
     # =============================================
     # SCREENSHOTS AND DEBUGGING
     # =============================================
-    
+
     def take_screenshot(self, name: str) -> str:
         """
         Take a screenshot and save it.
@@ -85,16 +82,16 @@ class BasePage:
         """
         import os
         os.makedirs("reports/screenshots", exist_ok=True)   # Create folder if it doesn't exist
-            # os.makedirs(path, exist_ok=True) creates the required folder(s).
-            # exist_ok=True means don't throw an error if the folder already exists.
-            # Remember:
-            # makedirs = make directories
-            # exist_ok=True = already exists? No problem.
+        # os.makedirs(path, exist_ok=True) creates the required folder(s).
+        # exist_ok=True means don't throw an error if the folder already exists.
+        # Remember:
+        # makedirs = make directories
+        # exist_ok=True = already exists? No problem.
         path = f"reports/screenshots/{name}.png"
-        self.page.screenshot(path = path)       # Take a screenshot of the current browser page and save it at the location stored in path
+        self.page.screenshot(path=path)       # Take a screenshot of the current browser page and save it at the location stored in path
         log.info(f"Screenshot saved: {path}")
         return path
-        
+
     def take_full_page_screenshot(self, name: str) -> str:
         """Full page screenshot — captures content below the fold."""
         os.makedirs("reports/screenshots", exist_ok=True)
@@ -102,38 +99,35 @@ class BasePage:
         self.page.screenshot(path=path, full_page=True)
         log.info(f"Full page screenshot saved: {path}")
         return path
-        
-    
+
     # =============================================
     # COMMON ASSERTIONS
     # =============================================
-    
+
     def expect_url(self, expected_url: str) -> "BasePage":
         """Assert current URL matches expected."""
         log.info(f"Asserting URL is: {expected_url}")
         expect(self.page).to_have_url(expected_url)
         log.info("URL assertion passed")
         return self
-        
+
     def expect_title(self, expected_title: str) -> "BasePage":
         """Assert browser tab matches expected."""
         log.info(f"Asserting title is: {expected_title}")
         expect(self.page).to_have_title(expected_title)
         log.info("Title assertion passed")
         return self
-        
-    
+
     # =============================================
     # DUNDER METHODS
     # =============================================
-    
+
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(url={self.page.url})"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(base_url={self.base_url!r})"
-        
-    
+
 
 # =============================================================
 # REVISION NOTES — BASE PAGE / POM

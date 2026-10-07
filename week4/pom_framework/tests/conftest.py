@@ -5,7 +5,7 @@
 #
 # browser       = session  | One launch per run. Expensive. Shared safely.
 # page          = function | Fresh context per test. Isolation guaranteed.
-# auth_storage = session   | Login once. Save JSON. Reuse everywhere.
+# auth_storage  = session   | Login once. Save JSON. Reuse everywhere.
 # logged_in_page = function | Fresh context + auth state. Fast + isolated.
 #
 # RULE: expensive shared resources = session scope
@@ -37,7 +37,7 @@ SCREENSHOT_DIR = "reports/screenshots"                  # Directory path for fai
 
 logging.basicConfig(                                    # Configures global log output formatting
     level=logging.INFO,                                 # Sets minimum log level to INFO
-    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s" # Sets log message layout format
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s"    # Sets log message layout format
 )
 
 
@@ -74,7 +74,7 @@ def browser(playwright) -> Browser:                     # Uses pytest-playwright
     - CI pipelines have no display server
     - Headless is the production-correct way to run
     """
-    browser = playwright.chromium.launch(headless=True) # Launches headless Chromium browser
+    browser = playwright.chromium.launch(headless=True)  # Launches headless Chromium browser
     yield browser                                       # Provides browser to downstream fixtures
     browser.close()                                     # Terminates browser process when session ends                                 # Terminates browser process when session ends
 
@@ -137,7 +137,7 @@ def auth_storage(browser: Browser) -> str:             # Handles logging in and 
     Delete the file to force a fresh login on next run.
     """
     if not os.path.exists(AUTH_STATE_PATH):             # Checks if session JSON file is missing
-        logging.info("Auth state not found. Logging in to create it.") # Logs initial state setup message
+        logging.info("Auth state not found. Logging in to create it.")  # Logs initial state setup message
         ctx = browser.new_context(                      # Creates temporary context for login setup
             viewport={"width": 1280, "height": 720}     # Sets screen dimensions
         )
@@ -145,15 +145,15 @@ def auth_storage(browser: Browser) -> str:             # Handles logging in and 
         pg.set_default_timeout(20_000)                  # Sets action timeout to 20 seconds
 
         # Use LoginPage to authenticate — consistent with the framework
-        LoginPage(pg, BASE_URL).navigate().login(VALID_USER, VALID_PASS) # Executes login UI sequence
+        LoginPage(pg, BASE_URL).navigate().login(VALID_USER, VALID_PASS)  # Executes login UI sequence
         pg.wait_for_url(f"{BASE_URL}/inventory.html")   # Waits until user reaches inventory page
 
         # Save the entire browser state
         ctx.storage_state(path=AUTH_STATE_PATH)         # Exports cookies & state to JSON file
-        logging.info(f"Auth state saved to {AUTH_STATE_PATH}") # Logs successful auth export
+        logging.info(f"Auth state saved to {AUTH_STATE_PATH}")  # Logs successful auth export
         ctx.close()                                     # Closes temporary context
     else:
-        logging.info(f"Reusing auth state from {AUTH_STATE_PATH}") # Logs reuse of existing session file
+        logging.info(f"Reusing auth state from {AUTH_STATE_PATH}")  # Logs reuse of existing session file
 
     return AUTH_STATE_PATH                              # Returns file path string to caller fixtures
 
@@ -163,7 +163,7 @@ def auth_storage(browser: Browser) -> str:             # Handles logging in and 
 # =============================================
 
 @pytest.fixture(scope="function")                       # Runs per test requiring pre-authenticated session
-def logged_in_page(browser: Browser, auth_storage: str) -> Page: # Yields pre-logged-in browser page
+def logged_in_page(browser: Browser, auth_storage: str) -> Page:  # Yields pre-logged-in browser page
     """
     The core authenticated fixture.
     Creates a NEW context loaded with saved auth state.
@@ -224,7 +224,7 @@ def cart(logged_in_page: Page) -> CartPage:             # Fixture preparing cart
     Saves 2 lines in every cart test.
     """
     inv = InventoryPage(logged_in_page, BASE_URL)       # Initializes InventoryPage wrapper
-    return inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart() # Adds item and navigates to CartPage
+    return inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart()  # Adds item and navigates to CartPage
 
 
 @pytest.fixture(scope="function")                       # Runs per test function
@@ -234,7 +234,7 @@ def checkout(logged_in_page: Page) -> CheckoutPage:     # Fixture preparing chec
     Backpack already in cart, navigated to checkout.
     """
     inv = InventoryPage(logged_in_page, BASE_URL)       # Initializes InventoryPage wrapper
-    cart = inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart() # Adds item and navigates to Cart
+    cart = inv.add_to_cart(InventoryPage.BACKPACK).go_to_cart()  # Adds item and navigates to Cart
     return cart.go_to_checkout()                        # Navigates from cart to CheckoutPage Step 1
 
 
@@ -287,7 +287,7 @@ def attach_screenshot_to_report(request):               # Auto-captures and atta
     page_obj = None                                     # Stores active Page object if found
     for fixture_name in ["page", "logged_in_page"]:     # Iterates through supported fixture names
         if fixture_name in request.node.funcargs:       # Checks if fixture was used by current test
-            page_obj = request.node.funcargs[fixture_name] # Extracts active Page instance
+            page_obj = request.node.funcargs[fixture_name]  # Extracts active Page instance
             break                                       # Stops searching once found
 
     if page_obj is None:                                # If no active Page object was associated
@@ -300,17 +300,17 @@ def attach_screenshot_to_report(request):               # Auto-captures and atta
     )
 
     try:
-        page_obj.screenshot(path=screenshot_path)               # Takes screenshot of browser viewport
-        logging.info(f"Failure screenshot saved: {screenshot_path}") # Logs path
+        page_obj.screenshot(path=screenshot_path)        # Takes screenshot of browser viewport
+        logging.info(f"Failure screenshot saved: {screenshot_path}")  # Logs path
 
         # Attach to pytest-html report so it appears inline
         # request.node.extras is provided by pytest-html plugin
         if hasattr(request.node, "extras"):             # Only attach if pytest-html is active
             import pytest_html                          # Import here to avoid hard dependency
             request.node.extras.append(                 # Appends image to test's extras list
-                pytest_html.extras.image(screenshot_path) # Creates inline image element
+                pytest_html.extras.image(screenshot_path)  # Creates inline image element
             )
-            logging.info("Screenshot attached to HTML report") # Logs successful attachment
+            logging.info("Screenshot attached to HTML report")  # Logs successful attachment
 
     except Exception as e:
-        logging.warning(f"Could not take or attach screenshot: {e}") # Logs warning on any failure
+        logging.warning(f"Could not take or attach screenshot: {e}")  # Logs warning on any failure

@@ -1,7 +1,6 @@
 # week5/saturday_project/tests/api/test_users_write.py
 # POST, PUT, PATCH, DELETE tests for /api/users
 
-import pytest
 import time
 import uuid
 from .schemas import (

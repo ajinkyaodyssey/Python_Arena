@@ -2,8 +2,6 @@
 # DELETE /api/users/{id} tests — happy path + negative cases
 # Run with: pytest week5/day23/test_delete.py -v -s
 
-import pytest
-
 BASE_URL = "https://reqres.in/api"
 VALID_USER_ID = 2
 

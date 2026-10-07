@@ -4,8 +4,6 @@
 #         response time, Content-Type header
 # Run with: pytest week5/day22/test_get_requests.py -v -s
 
-import pytest
-import requests
 from week5.day24.schemas import (
     SINGLE_USER_RESPONSE_SCHEMA,
     LIST_USERS_RESPONSE_SCHEMA,
@@ -208,13 +206,13 @@ def test_list_users_returns_paginated_data(api_client, base_url):
     - Total and total_pages are calculated correctly
     - The data array has the right number of items
     """
-    resp = api_client.get(f"{base_url}/users",params={"page": 1})
+    resp = api_client.get(f"{base_url}/users", params={"page": 1})
 
     assert resp.status_code == 200
 
     validate_schema(
-        resp.json(),
-        LIST_USERS_RESPONSE_SCHEMA,
+        resp.json(), 
+        LIST_USERS_RESPONSE_SCHEMA, 
         "GET /api/users?page=1"
     )
 
@@ -333,7 +331,7 @@ def test_get_user_response_time_under_2s(api_client, base_url):
     )
 
     print(f"\n  [PERF] Response time: {response_time:.3f}s")
-    print(f"  [PERF] Threshold: 2.000s")
+    print("  [PERF] Threshold: 2.000s")
     print(f"  [PERF] Status: {'PASS' if response_time < 2.0 else 'FAIL'}")
     
 
@@ -409,6 +407,6 @@ def test_response_headers_contain_expected_keys(
     # Content-Type must indicate JSON
     assert "application/json" in headers["Content-Type"]
 
-    print(f"\n  [HEADERS] All response headers:")
+    print("\n  [HEADERS] All response headers:")
     for key, value in headers.items():
         print(f"    {key}: {value}")

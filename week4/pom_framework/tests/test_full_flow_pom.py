@@ -21,15 +21,15 @@ def test_complete_purchase_flow(page: Page):
     """
     (
         LoginPage(page, BASE_URL)
-            .navigate()
-            .login("standard_user", "secret_sauce")
-            .expect_loaded()
-            .add_to_cart(InventoryPage.BACKPACK)
-            .go_to_cart()
-            .expect_item_count(1)
-            .go_to_checkout()
-            .complete_checkout("Divya", "Kumar", "600001")
-            .expect_order_complete()
+        .navigate()
+        .login("standard_user", "secret_sauce")
+        .expect_loaded()
+        .add_to_cart(InventoryPage.BACKPACK)
+        .go_to_cart()
+        .expect_item_count(1)
+        .go_to_checkout()
+        .complete_checkout("Divya", "Kumar", "600001")
+        .expect_order_complete()
     )
 
 
@@ -42,8 +42,8 @@ def test_sort_then_buy_most_expensive(page: Page):
     """
     inventory = (
         LoginPage(page, BASE_URL)
-            .navigate()
-            .login("standard_user", "secret_sauce")
+        .navigate()
+        .login("standard_user", "secret_sauce")
     )
 
     # Get most expensive item name before adding
@@ -53,12 +53,12 @@ def test_sort_then_buy_most_expensive(page: Page):
     # Add it and complete purchase
     (
         inventory
-            .add_to_cart(InventoryPage.FLEECE_JACKET)
-            .go_to_cart()
-            .expect_item_present(most_expensive)
-            .go_to_checkout()
-            .complete_checkout()
-            .expect_order_complete()
+        .add_to_cart(InventoryPage.FLEECE_JACKET)
+        .go_to_cart()
+        .expect_item_present(most_expensive)
+        .go_to_checkout()
+        .complete_checkout()
+        .expect_order_complete()
     )
 
 
@@ -71,20 +71,20 @@ def test_add_remove_then_buy(page: Page):
     """
     (
         LoginPage(page, BASE_URL)
-            .navigate()
-            .login("standard_user", "secret_sauce")
-            .add_to_cart(InventoryPage.BACKPACK)
-            .add_to_cart(InventoryPage.BIKE_LIGHT)
-            .expect_cart_badge(2)
-            .remove_from_the_cart(InventoryPage.BIKE_LIGHT)
-            .expect_cart_badge(1)
-            .go_to_cart()
-            .expect_item_count(1)
-            .expect_item_present("Sauce Labs Backpack")
-            .expect_item_not_present("Sauce Labs Bike Light")
-            .go_to_checkout()
-            .complete_checkout("Arjun", "Sharma", "400001")
-            .expect_order_complete()
+        .navigate()
+        .login("standard_user", "secret_sauce")
+        .add_to_cart(InventoryPage.BACKPACK)
+        .add_to_cart(InventoryPage.BIKE_LIGHT)
+        .expect_cart_badge(2)
+        .remove_from_the_cart(InventoryPage.BIKE_LIGHT)
+        .expect_cart_badge(1)
+        .go_to_cart()
+        .expect_item_count(1)
+        .expect_item_present("Sauce Labs Backpack")
+        .expect_item_not_present("Sauce Labs Bike Light")
+        .go_to_checkout()
+        .complete_checkout("Arjun", "Sharma", "400001")
+        .expect_order_complete()
     )
 
 
@@ -96,11 +96,11 @@ def test_logout_and_login_again(page: Page):
     """
     (
         LoginPage(page, BASE_URL)
-            .navigate()
-            .login("standard_user", "secret_sauce")
-            .expect_loaded()
-            .logout()
-            .expect_on_login_page()
-            .login("standard_user", "secret_sauce")
-            .expect_loaded()
+        .navigate()
+        .login("standard_user", "secret_sauce")
+        .expect_loaded()
+        .logout()
+        .expect_on_login_page()
+        .login("standard_user", "secret_sauce")
+        .expect_loaded()
     )

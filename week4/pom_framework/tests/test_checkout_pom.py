@@ -1,5 +1,4 @@
 # week4/pom_framework/tests/test_checkout_pom.py
-import pytest
 from week4.pom_framework.pages.checkout_page import CheckoutPage
 from playwright.sync_api import Page
 

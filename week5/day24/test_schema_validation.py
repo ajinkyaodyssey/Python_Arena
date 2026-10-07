@@ -42,7 +42,7 @@ def test_single_user_response_matches_schema(
         SINGLE_USER_RESPONSE_SCHEMA,
         "GET /api/users/2"
     )
-    print(f"\n  [SCHEMA] Single user response valid")
+    print("\n  [SCHEMA] Single user response valid")
     print(f"  [SCHEMA] User: {resp.json()['data']['email']}")
 
 
@@ -63,7 +63,7 @@ def test_single_user_data_object_matches_schema(
         USER_OBJECT_SCHEMA,
         "data object in GET /api/users/2"
     )
-    print(f"\n  [SCHEMA] User object valid")
+    print("\n  [SCHEMA] User object valid")
     print(f"  [SCHEMA] Fields: {list(user_data.keys())}")
 
 
@@ -186,7 +186,7 @@ def test_list_users_response_matches_schema(
     )
 
     body = resp.json()
-    print(f"\n  [SCHEMA] List response valid")
+    print("\n  [SCHEMA] List response valid")
     print(f"  [SCHEMA] Page: {body['page']}/{body['total_pages']}")
     print(f"  [SCHEMA] Users: {len(body['data'])}/{body['per_page']}")
 
@@ -210,7 +210,7 @@ def test_list_users_page_2_matches_schema(
     )
 
     body = resp.json()
-    print(f"\n  [SCHEMA] Page 2 response valid")
+    print("\n  [SCHEMA] Page 2 response valid")
     print(f"  [SCHEMA] Page 2 users: {[u['first_name'] for u in body['data']]}")
 
 
@@ -239,8 +239,7 @@ def test_every_user_in_list_matches_schema(
             errors.append(f"User {i}: {str(e)[:100]}")
 
     assert not errors, (
-        f"Schema errors in {len(errors)} users:\n" +
-        "\n".join(errors)
+        f"Schema errors in {len(errors)} users:\n" + "\n".join(errors)
     )
 
     print(f"\n  [SCHEMA] All {len(users)} users in list are valid")
@@ -268,7 +267,7 @@ def test_create_user_response_matches_schema(
     )
 
     body = resp.json()
-    print(f"\n  [SCHEMA] Create response valid")
+    print("\n  [SCHEMA] Create response valid")
     print(f"  [SCHEMA] id: {body['id']}, createdAt: {body['createdAt']}")
 
 
@@ -289,7 +288,7 @@ def test_update_user_put_matches_schema(
         "PUT /api/users/2"
     )
 
-    print(f"\n  [SCHEMA] PUT response valid")
+    print("\n  [SCHEMA] PUT response valid")
     print(f"  [SCHEMA] updatedAt: {resp.json()['updatedAt']}")
 
 
@@ -310,7 +309,7 @@ def test_update_user_patch_matches_schema(
         "PATCH /api/users/2"
     )
 
-    print(f"\n  [SCHEMA] PATCH response valid")
+    print("\n  [SCHEMA] PATCH response valid")
 
 
 # =============================================
@@ -340,7 +339,7 @@ def test_login_success_response_matches_schema(
     )
 
     token = resp.json()["token"]
-    print(f"\n  [SCHEMA] Login response valid")
+    print("\n  [SCHEMA] Login response valid")
     print(f"  [SCHEMA] Token: {token[:10]}...")
 
 
@@ -365,7 +364,7 @@ def test_login_failure_response_matches_schema(
     )
 
     error_msg = resp.json()["error"]
-    print(f"\n  [SCHEMA] Error response valid")
+    print("\n  [SCHEMA] Error response valid")
     print(f"  [SCHEMA] Error: {error_msg}")
 
 

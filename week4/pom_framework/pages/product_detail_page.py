@@ -17,7 +17,7 @@ class ProductDetailPage(BasePage):
     _ADD_TO_CART_BTN = "[data-test^='add-to-cart']"
     _REMOVE_BTN = "[data-test^='remove']"
     
-    def __init__(self, page: Page, base_url: str: "https://wwww.saucedemo.com"):
+    def __init__(self, page: Page, base_url: str = "https://wwww.saucedemo.com"):
         super().__init__(page, base_url)
         
     def get_name(self) -> str:

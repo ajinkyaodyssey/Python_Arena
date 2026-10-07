@@ -6,6 +6,7 @@ from .base_page import BasePage
 
 log = logging.getLogger(__name__)
 
+
 class CartPage(BasePage):
     """
     Page object for https://www.saucedemo.com/cart.html
@@ -18,8 +19,8 @@ class CartPage(BasePage):
     """
 
     PATH = "/cart.html"
-    
-        # =============================================
+
+    # =============================================
     # LOCATORS
     # =============================================
 
@@ -30,7 +31,7 @@ class CartPage(BasePage):
     _CART_ITEM_QUANTITY = ".cart_quantity"
     _CONTINUE_SHOPPING_BTN = "[data-test='continue-shopping']"
     _CHECKOUT_BTN = "[data-test='checkout']"
-    
+
     @staticmethod
     def _remove_btn(item_slug: str) -> str:
         return f"[data-test='remove-{item_slug}']"
@@ -39,7 +40,6 @@ class CartPage(BasePage):
         self, page: Page, base_url: str = "https://www.saucedemo.com"
     ):
         super().__init__(page, base_url)
-
 
     # =============================================
     # ACTIONS
@@ -50,7 +50,7 @@ class CartPage(BasePage):
         log.info(f"Removing from cart: {item_slug}")
         self.page.locator(self._remove_btn(item_slug)).click()
         return self
-        
+
     def continue_shopping(self) -> "InventoryPage":
         """Click Continue Shopping — returns to inventory."""
         from .inventory_page import InventoryPage
@@ -59,7 +59,7 @@ class CartPage(BasePage):
         return InventoryPage(self.page, self.base_url)      # The browser is now on the inventory page, so give me an InventoryPage object.
         # Take my page     → give it to InventoryPage
         # Take my base_url → give it to InventoryPage
-        
+
     def go_to_checkout(self) -> "CheckoutPage":
         """Click Checkout — navigates to checkout step one."""
         from .checkout_page import CheckoutPage
@@ -67,15 +67,14 @@ class CartPage(BasePage):
         self.page.locator(self._CHECKOUT_BTN).click()
         return CheckoutPage(self.page, self.base_url)
 
-
     # =============================================
     # QUERIES
     # =============================================
-    
+
     def get_item_count(self) -> int:
         """How many items are in the cart."""
         return self.page.locator(self._CART_ITEM).count()
-        
+
     def get_item_names(self) -> list[str]:
         """Names of all items currently in cart."""
         return self.page.locator(
@@ -88,7 +87,7 @@ class CartPage(BasePage):
             self._CART_ITEM_PRICE
         ).all_text_contents()
         return [float(p.replace("$", "")) for p in price_texts]
-        
+
     def get_item_quantity(self, index: int = 0) -> int:
         """Quantity of item at given index."""
         qty_text = self.page.locator(
@@ -99,12 +98,11 @@ class CartPage(BasePage):
     def is_empty(self) -> bool:
         """True if cart has no items."""
         return self.get_item_count() == 0
-        
-    
+
     # =============================================
     # ASSERTIONS
     # =============================================
-    
+
     def expect_loaded(self) -> "CartPage":
         """Assert cart page loaded correctly."""
         expect(self.page).to_have_url(f"{self.base_url}{self.PATH}")
@@ -112,14 +110,14 @@ class CartPage(BasePage):
             self.page.locator(self._PAGE_TITLE)
         ).to_have_text("Your Cart")
         return self
-        
+
     def expect_item_count(self, count: int) -> "CartPage":
         """Assert exact number of items in cart."""
         expect(
             self.page.locator(self._CART_ITEM)
         ).to_have_count(count)
         return self
-        
+
     def expect_item_present(self, item_name: str) -> "CartPage":
         """Assert a specific item name is in the cart."""
         names = self.get_item_names()
@@ -128,7 +126,7 @@ class CartPage(BasePage):
         return self
 
     def expect_item_not_present(self, item_name: str) -> "CartPage":
-        """Assert a specific item is NOT in the cart."""
+        """Assert a specific item name is NOT in the cart."""
         names = self.get_item_names()
         assert item_name not in names, \
             f"'{item_name}' should not be in cart. Cart contains: {names}"

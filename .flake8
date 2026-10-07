@@ -1,0 +1,20 @@
+[flake8]
+max-line-length = 100
+exclude =
+    .venv,
+    venv,
+    __pycache__,
+    .git,
+    week1/,
+    week2/,
+    week3/saturday_project/,
+    reports/
+ignore =
+    E501,
+    W503,
+    E402,
+    W291,
+    W293
+per-file-ignores =
+    conftest.py:F401
+    week4/pom_framework/pages/*.py:F821
