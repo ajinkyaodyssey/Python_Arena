@@ -50,16 +50,14 @@ class CheckoutPage(BasePage):
     _COMPLETE_HEADER = "[data-test='complete-header']"
     _COMPLETE_TEXT = "[data-test='complete-text']"
     _BACK_HOME_BTN = "[data-test='back-to-products']"
-    
 
     def __init__(self, page: Page, base_url: str = "httos://www.saucedemo.com"):
         super().__init__(page, base_url)
-        
-    
+
     # =============================================
     # STEP 1 ACTIONS — Customer Info
     # =============================================
-    
+
     def fill_customer_info(self, first_name: str, last_name: str, postal_code: str) -> "CheckoutPage":
         """Fill all three fields in the customer info form."""
         log.info(f"Filling checkout info: {first_name} {last_name}")
@@ -67,13 +65,13 @@ class CheckoutPage(BasePage):
         self.page.fill(self._LAST_NAME, last_name)
         self.page.fill(self._POSTAL_CODE, postal_code)
         return self
-        
+
     def continue_to_review(self) -> "CheckoutPage":
         """Click Continue to move to order review (Step 2)."""
         log.info("Clicking Continue to order review")
         self.page.locator(self._CONTINUE_BTN).click()
         return self
-    
+
     def fill_and_continue(
         self,
         first_name: str,
@@ -86,7 +84,7 @@ class CheckoutPage(BasePage):
         Returns self because we are still in the checkout flow.
         """
         return self.fill_customer_info(first_name, last_name, postal_code).continue_to_review()
-        
+
     def cancel(self) -> "CartPage":
         """Cancel from Step 1 — returns to cart."""
         from .cart_page import CartPage
@@ -94,11 +92,10 @@ class CheckoutPage(BasePage):
         self.page.locator(self._CANCEL_BTN).click()
         return CartPage(self.page, self.base_url)
 
-
     # =============================================
     # STEP 2 ACTIONS — Order Review
     # =============================================
-        
+
     def finish_order(self) -> "CheckoutPage":
         """Click Finish to complete the order (Step 3)."""
         log.info("Clicking Finish to complete order")
@@ -111,62 +108,59 @@ class CheckoutPage(BasePage):
         log.info("Cancelling from order review")
         self.page.locator(self._CANCEL_BTN).click()
         return InventoryPage(self.page, self.base_url)
-        
-    
+
     # =============================================
     # STEP 3 ACTIONS — Confirmation
     # =============================================
-    
+
     def back_to_products(self) -> "InventoryPage":
         """Click Back Home after order complete."""
         from .inventory_page import InventoryPage
         self.page.locator(self._BACK_HOME_BTN).click()
         return InventoryPage(self.page, self.base_url)
-        
-        
+
     # =============================================
     # QUERIES
     # =============================================
-    
+
     def get_error_text(self) -> str:
         """Error message text on Step 1."""
         return self.page.locator(self._ERROR_MSG).text_content().strip()
-        
+
     def get_subtotal(self) -> float:
         """Parse subtotal from Step 2 summary."""
         text = self.page.locator(self._SUBTOTAL_LABEL).text_content()
         return float(text.split("$")[1])        # Get the subtotal text, split by "$", use [1] - (2nd spilt) to get the amount, and convert it to a float.
-        
+
     def get_tax(self) -> float:
         """Parse tax from Step 2 summary."""
         text = self.page.locator(self._TAX_LABEL).text_content()
         return float(text.split("$")[1])
-        
+
     def get_total(self) -> float:
         """Parse total from Step 2 summary."""
         text = self.page.locator(
             self._TOTAL_LABEL
         ).text_content()
         return float(text.split("$")[1])
-        
+
     def get_order_item_names(self) -> list[str]:
         """Names of items shown in Step 2 summary."""
         return self.page.locator(
             self._ORDER_ITEM_NAME
         ).all_text_contents()
 
-
     # =============================================
     # ASSERTIONS — Step 1
     # =============================================
-        
+
     def expect_on_step_one(self) -> "CheckoutPage":
         """Assert we are on checkout step 1."""
         expect(self.page).to_have_url(
             f"{self.base_url}/checkout-step-one.html"
         )
         return self
-        
+
     def expect_error_containing(self, text: str) -> "CheckoutPage":
         """Assert validation error contains given text."""
         expect(
@@ -176,8 +170,7 @@ class CheckoutPage(BasePage):
             self.page.locator(self._ERROR_MSG)
         ).to_contain_text(text)
         return self
-        
-    
+
     # =============================================
     # ASSERTIONS — Step 2
     # =============================================
@@ -188,7 +181,7 @@ class CheckoutPage(BasePage):
             f"{self.base_url}/checkout-step-two.html"
         )
         return self
-        
+
     def expect_total_equals_subtotal_plus_tax(self) -> "CheckoutPage":
         """Assert total = subtotal + tax (within rounding)."""
         subtotal = self.get_subtotal()
@@ -197,7 +190,7 @@ class CheckoutPage(BasePage):
         assert abs((subtotal + tax) - total) < 0.01, \
             f"Total {total} != subtotal {subtotal} + tax {tax}"
         return self
-        
+
     def expect_item_in_summary(
         self, item_name: str
     ) -> "CheckoutPage":
@@ -206,8 +199,7 @@ class CheckoutPage(BasePage):
         assert item_name in names, \
             f"'{item_name}' not in order summary. Got: {names}"
         return self
-        
-    
+
     # =============================================
     # ASSERTIONS — Step 3
     # =============================================
@@ -221,7 +213,6 @@ class CheckoutPage(BasePage):
             self.page.locator(self._COMPLETE_HEADER)
         ).to_have_text("Thank you for your order!")
         return self
-
 
     # =============================================
     # COMPLETE FLOW HELPER
@@ -246,5 +237,5 @@ class CheckoutPage(BasePage):
                 "Divya", "Kumar", "600001"
             ).expect_order_complete()
         """
-        
+
         return (self.fill_and_continue(first_name, last_name, postal_code).finish_order())  # You are using self for finish_order() too — it's just attached to the result of the previous method

@@ -67,6 +67,7 @@ def invalid_credentials() -> dict:
         "password": "wrongpassword"
     }
 
+
 @pytest.fixture(autouse=True)
 def rate_limit_guard():
     """Small delay between API calls to avoid rate limiting in CI."""

@@ -2,7 +2,6 @@
 # PUT /api/users/{id} and PATCH /api/users/{id} tests
 # Run with: pytest week5/day23/test_put_patch.py -v -s
 
-import pytest
 
 BASE_URL = "https://reqres.in/api"
 VALID_USER_ID = 2     # Janet Weaver — known to exist
@@ -192,7 +191,7 @@ def test_patch_single_field_does_not_require_full_body(
     body = resp.json()
     assert body["name"] == payload["name"]
 
-    print(f"\n  [PATCH] Single field update succeeded")
+    print("\n  [PATCH] Single field update succeeded")
     print(f"  [PATCH] Name: {body['name']}")
 
 

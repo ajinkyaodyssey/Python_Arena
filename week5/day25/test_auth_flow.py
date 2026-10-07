@@ -6,7 +6,6 @@
 # - Session fixture reuse demonstration
 # Run with: pytest week5/day25/test_auth_flow.py -v -s
 
-import pytest
 import requests
 from week5.day24.schemas import (
     LOGIN_RESPONSE_SCHEMA,
@@ -351,9 +350,9 @@ def test_complete_auth_flow_login_then_use_token(
     it builds the auth flow from scratch to demonstrate
     the complete sequence clearly.
     """
-    print(f"\n  [FULL FLOW] Starting complete auth flow")
+    print("\n  [FULL FLOW] Starting complete auth flow")
 
-    print(f"\n  [FULL FLOW] Starting complete auth flow")
+    print("\n  [FULL FLOW] Starting complete auth flow")
 
     # STEP 1: Login using existing api_client (has x-api-key)
     print("  [FULL FLOW] Step 1: Login")
@@ -420,8 +419,8 @@ def test_auth_session_fixture_faster_than_login_per_test(
     assert resp3.status_code == 200
 
     print(f"\n  [SPEED] 3 authenticated requests in {total:.3f}s")
-    print(f"  [SPEED] No login overhead — token reused from fixture")
-    print(f"  [SPEED] If login per test: add ~6s of overhead for 3 tests")
+    print("  [SPEED] No login overhead — token reused from fixture")
+    print("  [SPEED] If login per test: add ~6s of overhead for 3 tests")
 
 
 # =============================================

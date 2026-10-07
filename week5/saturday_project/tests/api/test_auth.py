@@ -1,7 +1,6 @@
 # week5/saturday_project/tests/api/test_auth.py
 # Authentication flow tests — login, register, token usage
 
-import pytest
 from .schemas import (
     LOGIN_RESPONSE_SCHEMA,
     REGISTER_RESPONSE_SCHEMA,

@@ -2,10 +2,8 @@
 # Edge cases and boundary conditions.
 # These are the tests that separate good SDET suites from basic ones.
 
-import pytest
 import time
 from .schemas import (
-    SINGLE_USER_RESPONSE_SCHEMA,
     LIST_USERS_RESPONSE_SCHEMA,
     validate
 )

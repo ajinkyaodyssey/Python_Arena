@@ -2,7 +2,6 @@
 # Inventory tests using POM
 # Run with: pytest week4/pom_framework/tests/test_inventory_pom.py -v
 
-import pytest
 from week4.pom_framework.pages.inventory_page import InventoryPage
 
 

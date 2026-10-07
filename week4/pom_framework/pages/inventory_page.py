@@ -2,7 +2,6 @@
 # Page object for https://www.saucedemo.com/inventory.html
 
 import logging
-import re
 from typing import Optional
 from playwright.sync_api import Page, expect
 from .base_page import BasePage
@@ -19,14 +18,13 @@ class InventoryPage(BasePage):
     - Exposes business-level methods: sort_by(), add_to_cart(), get_items()
     - Returns appropriate page objects after navigation
     """
-    
+
     PATH = "/inventory.html"
-    
-    
+
     # =============================================
     # LOCATORS
     # =============================================
-    
+
     _PAGE_TITLE = ".title"
     _INVENTORY_LIST = ".inventory_list"
     _INVENTORY_ITEM = ".inventory_item"
@@ -38,7 +36,6 @@ class InventoryPage(BasePage):
     _CART_LINK = ".shopping_cart_link"
     _BURGER_MENU = "#react-burger-menu-btn"
     _LOGOUT_LINK = "#logout_sidebar_link"
-    
 
     # Dynamic locators — built from item name
     # Usage: self._add_btn("sauce-labs-backpack")
@@ -57,11 +54,10 @@ class InventoryPage(BasePage):
     FLEECE_JACKET = "sauce-labs-fleece-jacket"
     ONESIE = "sauce-labs-onesie"
     RED_TSHIRT = "test.allthethings()-t-shirt-(red)"
-    
+
     def __init__(self, page: Page, base_url: str = "https://www.saucedemo.com"):
         super().__init__(page, base_url)
-        
-        
+
     # =============================================
     # SORTING
     # =============================================
@@ -101,14 +97,14 @@ class InventoryPage(BasePage):
         return self
         # _add_btn() is static, so self is not passed to it automatically.
         # We use self._add_btn() only to access the static method through this class instance.
-        
+
     def remove_from_the_cart(self, item_slug: str) -> "InventoryPage":
         """Remove an item from cart while on the inventory page."""
         log.info(f"Removing from cart: '{item_slug}'")
         self.page.locator(self._remove_btn(item_slug)).click()
         log.info("Item removed from cart")
         return self
-        
+
     def go_to_cart(self) -> "CartPage":
         """Click the cart icon. Returns CartPage."""
         from .cart_page import CartPage         # CartPage is a Python class that contains methods for interacting with the Cart screen.
@@ -116,9 +112,9 @@ class InventoryPage(BasePage):
         self.page.locator(self._CART_LINK).click()
         log.info(f"Cart page URL: {self.page.url}")
         # After I click the cart, what page am I going to work with? -> CartPage.
-        return CartPage(self.page, self.base_url)       # We are returning self.page because the CartPage constructor expects it - def __init__(self, page, base_url) 
+        return CartPage(self.page, self.base_url)       # We are returning self.page because the CartPage constructor expects it - def __init__(self, page, base_url)
         # Return a CartPage object so we can interact with the cart page after navigation.
-        
+
         # 1. Click Cart
         #         ↓
         # 2. Browser navigates to cart URL
@@ -128,12 +124,11 @@ class InventoryPage(BasePage):
         # 4. Create CartPage object
         #         ↓
         # 5. Return that object
-        
-        
+
     # =============================================
     # NAVIGATION
     # =============================================
-        
+
     def open_product_detail(self, index: int = 0) -> "ProductDetailPage":
         """Click on a product name to open its detail page."""
         from .product_detail_page import ProductDetailPage
@@ -150,18 +145,17 @@ class InventoryPage(BasePage):
         self.page.locator(self._LOGOUT_LINK).click()
         log.info("Logged out successfully")
         return LoginPage(self.page, self.base_url)
-        
-        
+
     # =============================================
     # QUERIES
     # =============================================
-    
+
     def get_item_count(self) -> int:
         """Returns how many products are visible"""
         count = self.page.locator(self._INVENTORY_ITEM).count()
         log.debug(f"Inventory item count: {count}")
         return count
-        
+
     def get_cart_count(self) -> Optional[int]:
         """Returns cart badge number, or None if cart is empty."""
         badge = self.page.locator(self._CART_BADGE)
@@ -170,25 +164,24 @@ class InventoryPage(BasePage):
         count = int(badge.text_content())
         log.debug(f"Cart badge count: {count}")
         return count
-        
+
     def get_all_product_names(self) -> list[str]:
         """Returns list of all visible product names."""
         names = self.page.locator(self._ITEM_NAME).all_text_contents()
         log.debug(f"Product names: {names}")
         return names
-        
+
     def get_all_prices(self) -> list[float]:
         """Returns list of all visible prices as float."""
         price_texts = self.page.locator(self._ITEM_PRICE).all_text_contents()
         prices = [float(p.replace("$", "")) for p in price_texts]
         log.debug(f"Prices: {prices}")
         return prices
-        
+
     def is_cart_badge_visible(self) -> bool:
         """True if cart badge is showing"""
         return self.page.locator(self._CART_BADGE).is_visible()
-        
-    
+
     # =============================================
     # ASSERTIONS
     # =============================================

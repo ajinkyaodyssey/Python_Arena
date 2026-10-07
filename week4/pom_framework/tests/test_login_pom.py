@@ -3,10 +3,7 @@
 # Notice: zero locators in this file. Zero CSS selectors.
 # Run with: pytest week4/pom_framework/tests/test_login_pom.py -v
 
-import pytest
-from playwright.sync_api import expect
 from week4.pom_framework.pages.login_page import LoginPage
-from week4.pom_framework.pages.inventory_page import InventoryPage
 
 BASE_URL = "https://www.saucedemo.com"
 

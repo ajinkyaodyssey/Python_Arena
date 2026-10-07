@@ -5,7 +5,7 @@
 import os
 # os → Python module for interacting with environment variables, files, etc.
 
-import pytest
+# import pytest
 # pytest → testing framework
 
 import requests
@@ -14,7 +14,7 @@ import requests
 from pathlib import Path
 # Path → easier way to work with file/folder paths
 
-from week5.config.config import api_config, APIConfig
+from week5.config.config import api_config
 # Import our own config objects from config.py
 
 
@@ -314,6 +314,7 @@ def test_request_without_api_key_behaviour(api_client, base_url):
         f"Unexpected status: {resp.status_code}"
     )
 
+
 def test_request_with_wrong_api_key_behaviour(api_client, base_url):
     """
     Documents what happens when an invalid API key is sent.
@@ -356,6 +357,7 @@ def test_request_with_wrong_api_key_behaviour(api_client, base_url):
 # =============================================
 # SECTION 4: CI/CD secrets pattern
 # =============================================
+
 
 def test_ci_environment_variable_pattern():
 

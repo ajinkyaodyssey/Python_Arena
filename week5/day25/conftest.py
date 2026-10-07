@@ -76,13 +76,6 @@ def auth_client(api_client, auth_token) -> requests.Session:
     return api_client
 
 
-
-
-
-
-
-
-
 # # week5/day25/conftest.py
 # # Authentication fixtures for API tests.
 # #

@@ -40,11 +40,12 @@ def test_checkout_button_goes_to_checkout(cart: CartPage):
 
 def test_two_items_in_cart(logged_in_page):
     from week4.pom_framework.pages.inventory_page import InventoryPage
+
     inv = InventoryPage(logged_in_page, "https://www.saucedemo.com")
     cart = (
         inv.add_to_cart(InventoryPage.BACKPACK)
-           .add_to_cart(InventoryPage.BIKE_LIGHT)
-           .go_to_cart()
+        .add_to_cart(InventoryPage.BIKE_LIGHT)
+        .go_to_cart()
     )
     cart.expect_item_count(2)
 
@@ -52,6 +53,7 @@ def test_two_items_in_cart(logged_in_page):
 # =============================================
 # ADDITIONAL CART TESTS (Day 21 Saturday)
 # =============================================
+
 
 def test_cart_title_is_your_cart(cart: CartPage):
     """
@@ -69,13 +71,12 @@ def test_remove_item_updates_cart_correctly(
     Tests that remove targets the right item, not just any item.
     """
     from week4.pom_framework.pages.inventory_page import InventoryPage
-    from week4.pom_framework.pages.cart_page import CartPage
 
     inv = InventoryPage(logged_in_page, "https://www.saucedemo.com")
     cart = (
         inv.add_to_cart(InventoryPage.BACKPACK)
-           .add_to_cart(InventoryPage.BIKE_LIGHT)
-           .go_to_cart()
+        .add_to_cart(InventoryPage.BIKE_LIGHT)
+        .go_to_cart()
     )
 
     # Remove only the bike light
@@ -131,6 +132,7 @@ def test_cart_item_price_matches_inventory_price(
     assert cart_prices[0] == 29.99, (
         f"Backpack should cost 29.99, got {cart_prices[0]}"
     )
+
 
 def test_cart_page_has_continue_and_checkout_buttons(
     cart: CartPage

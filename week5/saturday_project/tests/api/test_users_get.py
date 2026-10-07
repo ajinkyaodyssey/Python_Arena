@@ -2,7 +2,6 @@
 # GET endpoint tests for /api/users
 # Coverage: single user, list users, pagination, edge cases
 
-import pytest
 import math
 from .schemas import (
     SINGLE_USER_RESPONSE_SCHEMA,

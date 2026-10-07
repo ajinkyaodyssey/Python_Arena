@@ -2,7 +2,6 @@
 # POST /api/users tests — happy path + negative cases
 # Run with: pytest week5/day23/test_post.py -v -s
 
-import pytest
 
 BASE_URL = "https://reqres.in/api"
 
@@ -125,7 +124,7 @@ def test_post_different_payloads_get_different_ids(
 
     print(f"\n  [POST] Request 1 ID: {id1}")
     print(f"  [POST] Request 2 ID: {id2}")
-    print(f"  [POST] Both created successfully — POST is not idempotent")
+    print("  [POST] Both created successfully — POST is not idempotent")
 
 
 # =============================================
