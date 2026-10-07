@@ -1,17 +1,19 @@
 # .github/workflows/tests.yml
 #
-# WORKFLOW DESIGN:
+# PIPELINE DESIGN:
 # ─────────────────────────────────────────────
-# unit-tests    → every push, fast, no browser
-# smoke-tests   → every push, browser, ~2 min
-# api-tests     → nightly only (reqres.in rate limit)
+# lint          → every push, ~10s, blocks all tests
+# unit-tests    → every push, ~10s, after lint
+# test-ui       → every push, ~3min, parallel with unit
+# test-api      → nightly only (reqres.in rate limit)
 # regression    → nightly only, full suite
 #
-# WHY THIS DESIGN:
-# Pushing code 5 times a day should not exhaust
-# a third-party API's free tier. Only tests that
-# validate YOUR code run on every push. Tests that
-# depend on external services run on a schedule.
+# PARALLELISM:
+# unit-tests and test-ui both need lint.
+# They run at the same time after lint passes.
+# Total time: lint(10s) + max(unit(10s), ui(3min)) = ~3min
+# Without parallelism: lint + unit + ui = ~4min
+# With parallelism saves time as suite grows larger.
 
 name: SDET Framework Test Suite
 
@@ -21,10 +23,8 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    # Nightly at 2 AM UTC — runs api-tests + regression
     - cron: '0 2 * * *'
   workflow_dispatch:
-    # Manual trigger — runs everything on demand
     inputs:
       run_api_tests:
         description: 'Run API tests (uses reqres.in quota)'
@@ -32,8 +32,6 @@ on:
         default: 'false'
         type: boolean
 
-# Cancel in-progress runs on the same branch
-# Prevents queue buildup when you push rapidly
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -41,14 +39,48 @@ concurrency:
 jobs:
 
   # ============================================
-  # JOB 1: Unit Tests
+  # JOB 1: Lint
   # Runs: every push and PR
-  # What: pure Python tests, no browser, no API
+  # Blocks: all other jobs
+  # Why first: no point running 200 tests against
+  # code that has syntax errors or undefined names
+  # ============================================
+  lint:
+    name: Lint (flake8)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install flake8
+        run: pip install flake8==7.0.0
+
+      - name: Run flake8
+        run: |
+          flake8 week4/pom_framework/ week5/ \
+            --max-line-length=100 \
+            --count \
+            --statistics
+        # --count: prints total error count at end
+        # --statistics: shows which rules were violated most
+
+  # ============================================
+  # JOB 2: Unit Tests
+  # Runs: every push, after lint passes
+  # Parallel with: test-ui
   # Speed: ~10 seconds
   # ============================================
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    needs: lint
 
     steps:
       - name: Checkout code
@@ -81,16 +113,15 @@ jobs:
           retention-days: 7
 
   # ============================================
-  # JOB 2: Smoke Tests
-  # Runs: every push and PR
-  # What: critical Playwright UI tests only
-  # Speed: ~2-3 minutes
-  # Note: only runs tests marked @pytest.mark.smoke
+  # JOB 3: UI Tests (Playwright)
+  # Runs: every push, after lint passes
+  # Parallel with: unit-tests
+  # Speed: ~3 minutes
   # ============================================
-  smoke-tests:
-    name: Smoke Tests
+  test-ui:
+    name: UI Tests (Playwright)
     runs-on: ubuntu-latest
-    needs: unit-tests
+    needs: lint
 
     steps:
       - name: Checkout code
@@ -113,35 +144,34 @@ jobs:
       - name: Create reports directory
         run: mkdir -p reports/screenshots
 
-      - name: Run smoke tests
+      - name: Run UI tests
         run: |
           pytest week4/pom_framework/tests/ \
             -v --tb=short \
-            --html=reports/smoke_report.html \
+            --html=reports/ui_report.html \
             --self-contained-html
-        continue-on-error: false
 
-      - name: Upload smoke test report
+      - name: Upload UI test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: smoke-test-report
+          name: ui-test-report
           path: |
-            reports/smoke_report.html
+            reports/ui_report.html
             reports/screenshots/
           retention-days: 7
 
   # ============================================
-  # JOB 3: API Tests
-  # Runs: NIGHTLY ONLY or manual trigger
-  # Why not on push: reqres.in has free tier limit
-  # ~100 requests/day. Suite uses ~50 per run.
-  # Two pushes a day would exhaust the quota.
-  # Fix: schedule nightly after limit resets at 2AM.
+  # JOB 4: API Tests
+  # Runs: NIGHTLY + MANUAL ONLY
+  # Why not on push: reqres.in rate limit
+  # ~100 requests/day, suite uses ~50 per run
+  # Fix: schedule at 2AM after daily reset
   # ============================================
-  api-tests:
-    name: API Tests
+  test-api:
+    name: API Tests (reqres.in)
     runs-on: ubuntu-latest
+    needs: lint
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
@@ -180,18 +210,18 @@ jobs:
           retention-days: 7
 
   # ============================================
-  # JOB 4: Regression Tests
-  # Runs: NIGHTLY ONLY or manual trigger
-  # What: full suite — UI + API + DB validation
+  # JOB 5: Regression (Full Suite)
+  # Runs: NIGHTLY + MANUAL ONLY
+  # Needs: unit-tests AND test-ui both passing
   # Speed: ~8-10 minutes
   # ============================================
-  regression-tests:
-    name: Regression Tests (Full Suite)
+  regression:
+    name: Regression (Full Suite)
     runs-on: ubuntu-latest
+    needs: [unit-tests, test-ui]
     if: |
       github.event_name == 'schedule' ||
       github.event_name == 'workflow_dispatch'
-    needs: [unit-tests]
 
     steps:
       - name: Checkout code
@@ -238,11 +268,3 @@ jobs:
             reports/regression_report.html
             reports/screenshots/
           retention-days: 14
-
-      - name: Upload DB files for inspection
-        uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: db-files-on-failure
-          path: week6/**/*.db
-          retention-days: 3
