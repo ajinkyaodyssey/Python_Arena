@@ -1,19 +1,21 @@
 # .github/workflows/tests.yml
 #
-# PIPELINE DESIGN:
-# ─────────────────────────────────────────────
-# lint          → every push, ~10s, blocks all tests
-# unit-tests    → every push, ~10s, after lint
-# test-ui       → every push, ~3min, parallel with unit
-# test-api      → nightly only (reqres.in rate limit)
-# regression    → nightly only, full suite
+# PIPELINE ARCHITECTURE:
 #
-# PARALLELISM:
-# unit-tests and test-ui both need lint.
-# They run at the same time after lint passes.
-# Total time: lint(10s) + max(unit(10s), ui(3min)) = ~3min
-# Without parallelism: lint + unit + ui = ~4min
-# With parallelism saves time as suite grows larger.
+#  push/PR:
+#    lint (10s)
+#      ├── unit-tests (10s)   ← parallel
+#      └── test-ui (3min)     ← parallel
+#
+#  nightly 2AM UTC:
+#    lint
+#      ├── unit-tests
+#      ├── test-ui
+#      ├── test-api           ← reqres.in limit resets daily
+#      └── regression         ← full suite
+#
+#  manual trigger:
+#    all jobs run on demand
 
 name: SDET Framework Test Suite
 
@@ -23,15 +25,22 @@ on:
   pull_request:
     branches: [main]
   schedule:
+    # Nightly at 2:00 AM UTC
+    # Cron: minute hour day month weekday
+    # 0     2    *   *     *  = every day at 2AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch:
+    # Manual trigger from GitHub Actions UI
+    # Runs all jobs including API tests
     inputs:
-      run_api_tests:
-        description: 'Run API tests (uses reqres.in quota)'
+      run_full_suite:
+        description: 'Run full suite including API tests'
         required: false
         default: 'false'
         type: boolean
 
+# Cancel old runs when new push arrives on same branch
+# Prevents queue buildup during rapid development
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -40,10 +49,10 @@ jobs:
 
   # ============================================
   # JOB 1: Lint
-  # Runs: every push and PR
-  # Blocks: all other jobs
-  # Why first: no point running 200 tests against
-  # code that has syntax errors or undefined names
+  # Trigger: every push and PR
+  # Purpose: catch syntax errors before wasting
+  #          3 minutes on browser test setup
+  # Speed: ~10 seconds
   # ============================================
   lint:
     name: Lint (flake8)
@@ -68,12 +77,10 @@ jobs:
             --max-line-length=100 \
             --count \
             --statistics
-        # --count: prints total error count at end
-        # --statistics: shows which rules were violated most
 
   # ============================================
   # JOB 2: Unit Tests
-  # Runs: every push, after lint passes
+  # Trigger: every push, after lint
   # Parallel with: test-ui
   # Speed: ~10 seconds
   # ============================================
@@ -104,6 +111,11 @@ jobs:
             --html=reports/unit_report.html \
             --self-contained-html
 
+      # if: always() explained:
+      # Default behaviour: if 'Run unit tests' fails,
+      # GitHub skips this upload step.
+      # That means no report when you need it most.
+      # if: always() forces upload regardless of test result.
       - name: Upload unit test report
         uses: actions/upload-artifact@v4
         if: always()
@@ -114,7 +126,7 @@ jobs:
 
   # ============================================
   # JOB 3: UI Tests (Playwright)
-  # Runs: every push, after lint passes
+  # Trigger: every push, after lint
   # Parallel with: unit-tests
   # Speed: ~3 minutes
   # ============================================
@@ -147,11 +159,27 @@ jobs:
       - name: Run UI tests
         run: |
           pytest week4/pom_framework/tests/ \
+            week7/day35/test_always_demo.py \
             -v --tb=short \
             --html=reports/ui_report.html \
             --self-contained-html
 
-      - name: Upload UI test report
+      # FAILURE SCREENSHOT UPLOAD — the key step
+      # How this works end to end:
+      # 1. A Playwright test fails
+      # 2. conftest.py screenshot_on_failure hook fires
+      # 3. page.screenshot() saves PNG to reports/screenshots/
+      # 4. This step uploads that folder to GitHub
+      # 5. Go to Actions → your run → Artifacts section
+      # 6. Download ui-test-report zip
+      # 7. Open the screenshots folder
+      # 8. See exactly what the browser showed at failure
+      #
+      # Without if: always():
+      # Step fires only on success → no screenshots when failing
+      # With if: always():
+      # Step fires regardless → screenshots always available
+      - name: Upload UI test report and screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -163,10 +191,15 @@ jobs:
 
   # ============================================
   # JOB 4: API Tests
-  # Runs: NIGHTLY + MANUAL ONLY
-  # Why not on push: reqres.in rate limit
-  # ~100 requests/day, suite uses ~50 per run
-  # Fix: schedule at 2AM after daily reset
+  # Trigger: NIGHTLY + MANUAL ONLY
+  #
+  # WHY NOT ON PUSH:
+  # reqres.in free tier = ~100 requests/day
+  # Week5 suite = ~50 requests per run
+  # 2 pushes per day = quota exhausted = 429 errors
+  #
+  # FIX: Run at 2AM UTC after daily limit resets
+  # schedule trigger fires at 2AM, limit resets at midnight
   # ============================================
   test-api:
     name: API Tests (reqres.in)
@@ -211,8 +244,8 @@ jobs:
 
   # ============================================
   # JOB 5: Regression (Full Suite)
-  # Runs: NIGHTLY + MANUAL ONLY
-  # Needs: unit-tests AND test-ui both passing
+  # Trigger: NIGHTLY + MANUAL ONLY
+  # Needs: unit-tests AND test-ui both green
   # Speed: ~8-10 minutes
   # ============================================
   regression:
@@ -259,7 +292,7 @@ jobs:
         env:
           REQRES_API_KEY: ${{ secrets.REQRES_API_KEY }}
 
-      - name: Upload regression report
+      - name: Upload regression report and screenshots
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -268,3 +301,11 @@ jobs:
             reports/regression_report.html
             reports/screenshots/
           retention-days: 14
+
+      - name: Upload DB files on failure
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: db-files-on-failure
+          path: week6/**/*.db
+          retention-days: 3
