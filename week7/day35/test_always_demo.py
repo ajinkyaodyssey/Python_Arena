@@ -8,7 +8,7 @@
 import pytest
 
 
-# @pytest.mark.skip(reason="Demo only - enable to test if:always() behaviour")
+@pytest.mark.skip(reason="Demo only - enable to test if:always() behaviour")
 def test_deliberately_fails_to_prove_always():
     """
     This test exists to prove that if: always() works in CI.
