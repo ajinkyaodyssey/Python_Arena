@@ -1,0 +1,48 @@
+# .dockerignore
+# Files NOT copied into the Docker image.
+# Same concept as .gitignore but for Docker.
+#
+# WHY THIS MATTERS:
+# Without .dockerignore, COPY . . copies everything.
+# .venv alone is 500MB+. __pycache__ is stale bytecode.
+# .env contains secrets that must never be in an image.
+# reports/ contains generated files not source code.
+
+# Virtual environment — never copy this
+.venv/
+venv/
+env/
+
+# Python cache — stale inside container
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Secrets — NEVER in a Docker image
+.env
+.env.local
+*.pem
+*.key
+
+# Generated test artifacts
+reports/
+.pytest_cache/
+*.db
+
+# Git history — not needed inside container
+.git/
+.gitignore
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+
+# Docker files themselves
+Dockerfile
+.dockerignore
+
+# Node (if any)
+node_modules/
