@@ -130,10 +130,27 @@ jobs:
   # Parallel with: unit-tests
   # Speed: ~3 minutes
   # ============================================
+  # ============================================
+  # JOB 3: UI Tests (Playwright) — Matrix
+  # Runs: every push, after lint passes
+  # Matrix: chromium AND firefox in parallel
+  # Why matrix: one job definition runs twice
+  # automatically with different browser values.
+  # Adding webkit later = one word change.
+  # ============================================
   test-ui:
-    name: UI Tests (Playwright)
+    name: UI Tests (${{ matrix.browser }})
     runs-on: ubuntu-latest
     needs: lint
+
+    strategy:
+      # fail-fast: false means if chromium fails,
+      # firefox still runs to completion.
+      # Without this, one browser failure cancels
+      # the other — you lose cross-browser data.
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox]
 
     steps:
       - name: Checkout code
@@ -151,7 +168,22 @@ jobs:
           pip install -r requirements.txt
 
       - name: Install Playwright browsers
-        run: playwright install --with-deps chromium
+        # Install only the browser we need for this matrix run
+        # Not all browsers — saves 1-2 minutes per run
+        #
+        # WHY DIFFERENT FLAGS PER BROWSER:
+        # chromium — ubuntu-latest already has all system deps
+        #            pre-installed. Running --with-deps triggers
+        #            a large apt install that gets cancelled by
+        #            GitHub's runner. Plain install is enough.
+        # firefox  — needs extra font packages not on ubuntu-latest
+        #            by default. --with-deps installs them correctly.
+        run: |
+          if [ "${{ matrix.browser }}" = "chromium" ]; then
+            playwright install chromium
+          else
+            playwright install --with-deps ${{ matrix.browser }}
+          fi
 
       - name: Create reports directory
         run: mkdir -p reports/screenshots
@@ -161,7 +193,8 @@ jobs:
           pytest week4/pom_framework/tests/ \
             week7/day35/test_always_demo.py \
             -v --tb=short \
-            --html=reports/ui_report.html \
+            --browser ${{ matrix.browser }} \
+            --html=reports/ui_report_${{ matrix.browser }}.html \
             --self-contained-html
 
       # FAILURE SCREENSHOT UPLOAD — the key step
@@ -179,13 +212,16 @@ jobs:
       # Step fires only on success → no screenshots when failing
       # With if: always():
       # Step fires regardless → screenshots always available
-      - name: Upload UI test report and screenshots
+      - name: Upload UI test report
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ui-test-report
+          # Include browser name in artifact name
+          # Without this both matrix runs upload to
+          # the same name and overwrite each other
+          name: ui-report-${{ matrix.browser }}
           path: |
-            reports/ui_report.html
+            reports/ui_report_${{ matrix.browser }}.html
             reports/screenshots/
           retention-days: 7
 
