@@ -56,27 +56,17 @@ logging.basicConfig(                                    # Configures global log 
 #         yield pw                                        # Provides engine instance; cleans up after session
 
 
-@pytest.fixture(scope="session")                        # Runs once for the entire test session
-def browser(playwright) -> Browser:                     # Uses pytest-playwright's built-in playwright fixture
+@pytest.fixture(scope="session")
+def browser(playwright, browser_name):
     """
-    Launch ONE browser for the entire test session.
-    Uses pytest-playwright's built-in 'playwright' fixture
-    instead of sync_playwright() to avoid asyncio conflict.
-
-    Why session scope:
-    - Browser launch takes 1-2 seconds
-    - 40 tests * 2s = 80 seconds wasted if function-scoped
-    - The browser itself is stateless between tests
-      (state lives in contexts, not the browser)
-
-    headless=True because:
-    - Codespaces has no display server
-    - CI pipelines have no display server
-    - Headless is the production-correct way to run
+    Session-scoped browser fixture.
+    Uses pytest-playwright's built-in playwright and browser_name fixtures
+    so --browser chromium and --browser firefox both work correctly in CI.
+    browser_name comes from the --browser CLI flag passed by the matrix.
     """
-    browser = playwright.chromium.launch(headless=True)  # Launches headless Chromium browser
-    yield browser                                       # Provides browser to downstream fixtures
-    browser.close()                                     # Terminates browser process when session ends                                 # Terminates browser process when session ends
+    browser = playwright[browser_name].launch(headless=True)
+    yield browser
+    browser.close()                                 # Terminates browser process when session ends                                 # Terminates browser process when session ends
 
 
 # =============================================
