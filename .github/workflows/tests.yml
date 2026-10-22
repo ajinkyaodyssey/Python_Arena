@@ -170,7 +170,20 @@ jobs:
       - name: Install Playwright browsers
         # Install only the browser we need for this matrix run
         # Not all browsers — saves 1-2 minutes per run
-        run: playwright install --with-deps ${{ matrix.browser }}
+        #
+        # WHY DIFFERENT FLAGS PER BROWSER:
+        # chromium — ubuntu-latest already has all system deps
+        #            pre-installed. Running --with-deps triggers
+        #            a large apt install that gets cancelled by
+        #            GitHub's runner. Plain install is enough.
+        # firefox  — needs extra font packages not on ubuntu-latest
+        #            by default. --with-deps installs them correctly.
+        run: |
+          if [ "${{ matrix.browser }}" = "chromium" ]; then
+            playwright install chromium
+          else
+            playwright install --with-deps ${{ matrix.browser }}
+          fi
 
       - name: Create reports directory
         run: mkdir -p reports/screenshots
